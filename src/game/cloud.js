@@ -1,7 +1,8 @@
+import { Peer } from 'peerjs';
+
 /**
  * 皇室對決 3D - 帳號名稱 / Gmail 跨設備全自動雲端即時同步引擎 (Zero-Friction Auto Cloud Sync)
- * 玩家所有進度（1-100等級、卡牌庫、金幣、寶石、獎盃、戰令、任務）全自動綁定於帳號名稱與 Gmail
- * 任何裝置（電腦 / iPhone / Android / 平板）開啟或登入同一帳號，自動秒速雙向同步
+ * 結合 WebRTC P2P 直連、Vercel Serverless 與同網域 API，徹底杜絕 CORS 攔截
  */
 
 class CloudSyncService {
@@ -15,6 +16,7 @@ class CloudSyncService {
     this.updateListeners = [];
     this.heartbeatTimer = null;
     this.currentUserGetter = null;
+    this.currentPeerHost = null;
 
     this.setupWindowListeners();
   }
@@ -36,7 +38,7 @@ class CloudSyncService {
     });
   }
 
-  // 將字串轉為安全唯一的 URL 識別 Slug (支援中文字符、特殊符號與 Email)
+  // 將字串轉為安全唯一的 URL 識別 Slug
   toSafeSlug(prefix, str) {
     if (!str || !str.trim()) return null;
     const clean = str.trim().toLowerCase();
@@ -47,7 +49,7 @@ class CloudSyncService {
     return `${prefix}_${hex}`;
   }
 
-  // 根據使用者帳號物件提取所有關聯的雲端識別碼 (使用者名稱、Gmail、Google ID)
+  // 根據使用者帳號物件提取所有關聯的雲端識別碼
   getAccountSlugs(user) {
     if (!user) return ['royal_u_guest'];
     const slugs = [];
@@ -79,7 +81,7 @@ class CloudSyncService {
     return slugs.length > 0 ? slugs : ['royal_u_guest'];
   }
 
-  // 設定視窗與背景監聽器 (手機切換回分頁、解鎖螢幕、恢復網路時自動秒速檢查同步)
+  // 設定視窗與背景監聽器
   setupWindowListeners() {
     if (typeof window === 'undefined') return;
 
@@ -131,14 +133,12 @@ class CloudSyncService {
           return savePayload;
         }
       }
-    } catch (e) {
-      console.warn('自動拉取雲端存檔異常:', e);
-    }
+    } catch (e) {}
     return null;
   }
 
   /**
-   * 由雲端伺服器載入該帳號 (以用戶名 / Gmail / 全局存檔槽 查詢) 的所有存檔資料包
+   * 由雲端伺服器載入該帳號 (以用戶名 / Gmail / 全局存檔槽 查詢)
    */
   async loadAccountFromServer(user) {
     if (!user) return null;
@@ -158,22 +158,7 @@ class CloudSyncService {
       } catch (e) {}
     }
 
-    // 2. 外部備援通道 (cl1p.net) 查詢
-    for (const slug of slugs) {
-      try {
-        const res = await fetch(`https://api.cl1p.net/${slug}`, { cache: 'no-store' });
-        if (res.ok) {
-          const text = await res.text();
-          if (text && (text.includes('playerLevel') || text.includes('gold') || text.includes('cards'))) {
-            const parsed = JSON.parse(text);
-            this.lastLoadedTimestamp = Math.max(this.lastLoadedTimestamp, parsed.timestamp || 0);
-            return parsed.save || parsed;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // 3. 若為訪客帳號或新裝置未登入，嘗試拉取最近全局主存檔
+    // 2. 若為訪客帳號或新裝置未登入，嘗試拉取最近全局主存檔
     try {
       const res = await fetch('/api/cloud?key=royal_latest_global_save', { cache: 'no-store' });
       if (res.ok) {
@@ -184,7 +169,7 @@ class CloudSyncService {
       }
     } catch (e) {}
 
-    // 4. 本地快取保底
+    // 3. 本地快取保底
     try {
       const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
       for (const slug of slugs) {
@@ -198,7 +183,7 @@ class CloudSyncService {
   }
 
   /**
-   * 防抖排程即時同步 (卡牌升級、獲得金幣、升等、對戰後自動觸發)
+   * 防抖排程即時同步
    */
   scheduleSaveToServer(user, saveData) {
     if (!user) return;
@@ -244,7 +229,7 @@ class CloudSyncService {
     this.isSyncing = true;
     let anySuccess = false;
 
-    // 1. 內部零 CORS /api/cloud 儲存 (包含用戶 Slugs 與全局最新存檔槽)
+    // 1. 內部零 CORS /api/cloud 儲存
     const targetKeys = [...slugs, 'royal_latest_global_save'];
     for (const key of targetKeys) {
       try {
@@ -259,23 +244,12 @@ class CloudSyncService {
       } catch (e) {}
     }
 
-    // 2. 外部備援通道 (cl1p.net)
-    for (const slug of slugs) {
-      try {
-        fetch(`https://api.cl1p.net/${slug}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: bodyStr
-        }).catch(() => {});
-      } catch (e) {}
-    }
-
     this.isSyncing = false;
     return anySuccess;
   }
 
   /**
-   * 4 位數極短碼輔助上傳 (供快速備用)
+   * 4 位數極短碼輔助上傳 (同時啟動 WebRTC P2P 雲端通道)
    */
   async uploadWithShortPin(saveData, user) {
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
@@ -291,10 +265,9 @@ class CloudSyncService {
     };
     const bodyStr = JSON.stringify(payload);
 
-    // 同步儲存至帳號
+    // 同步儲存至帳號與 /api/cloud
     this.saveAccountToServer(user, saveData);
 
-    // 儲存至 /api/cloud 與 cl1p
     try {
       await fetch(`/api/cloud?pin=${pin}`, {
         method: 'POST',
@@ -303,25 +276,32 @@ class CloudSyncService {
       });
     } catch (e) {}
 
+    // 啟動 WebRTC P2P 存檔廣播伺服器 (0 CORS、直接傳送給手機)
     try {
-      fetch(`https://api.cl1p.net/royal_${pin}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: bodyStr
-      }).catch(() => {});
+      if (this.currentPeerHost) {
+        try { this.currentPeerHost.destroy(); } catch (e) {}
+      }
+      const peerHost = new Peer(`royal-pin-${pin}`, { debug: 0 });
+      this.currentPeerHost = peerHost;
+      peerHost.on('connection', (conn) => {
+        conn.on('open', () => {
+          conn.send({ type: 'sync_save_payload', save: saveData, user });
+          console.log(`🎉 [WebRTC-P2P] 存檔已透過 P2P 成功即時傳送至手機！`);
+        });
+      });
     } catch (e) {}
 
     return { success: true, pin: pin, code: pin, level: saveData.playerLevel || 1 };
   }
 
   /**
-   * 使用 4 位數極短碼從雲端載入存檔
+   * 使用 4 位數極短碼從雲端載入存檔 (結合 /api/cloud 與 WebRTC P2P)
    */
   async downloadWithShortPin(pin) {
     if (!pin || !pin.trim()) return null;
     const cleanPin = pin.trim();
 
-    // 1. 由 /api/cloud 下載
+    // 1. 由 /api/cloud 載入
     try {
       const res = await fetch(`/api/cloud?pin=${cleanPin}`, { cache: 'no-store' });
       if (res.ok) {
@@ -332,17 +312,37 @@ class CloudSyncService {
       }
     } catch (e) {}
 
-    // 2. 由 cl1p.net 下載
-    try {
-      const res = await fetch(`https://api.cl1p.net/royal_${cleanPin}`, { cache: 'no-store' });
-      if (res.ok) {
-        const text = await res.text();
-        if (text && (text.includes('playerLevel') || text.includes('save') || text.includes('gold'))) {
-          const parsed = JSON.parse(text);
-          return parsed.save || parsed;
-        }
+    // 2. 由 WebRTC P2P 直連拉取
+    const p2pPromise = new Promise((resolve) => {
+      try {
+        const clientPeer = new Peer({ debug: 0 });
+        const targetPeerId = `royal-pin-${cleanPin}`;
+        const timeout = setTimeout(() => {
+          try { clientPeer.destroy(); } catch (e) {}
+          resolve(null);
+        }, 3000);
+
+        clientPeer.on('open', () => {
+          const conn = clientPeer.connect(targetPeerId, { reliable: true });
+          conn.on('data', (msg) => {
+            if (msg && msg.save) {
+              clearTimeout(timeout);
+              try { clientPeer.destroy(); } catch (e) {}
+              resolve(msg.save);
+            }
+          });
+        });
+        clientPeer.on('error', () => {
+          clearTimeout(timeout);
+          resolve(null);
+        });
+      } catch (e) {
+        resolve(null);
       }
-    } catch (e) {}
+    });
+
+    const p2pResult = await p2pPromise;
+    if (p2pResult) return p2pResult;
 
     return null;
   }

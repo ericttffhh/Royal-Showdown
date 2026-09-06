@@ -440,5 +440,18 @@ class ClashRoyaleApp {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // 📱 檢查 URL 一鍵存檔同步參數 (?sync=...)
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const syncPayload = urlParams.get('sync');
+    if (syncPayload) {
+      const importRes = inventory.importSyncCode(syncPayload);
+      if (importRes?.success) {
+        console.log('🎉 透過同步連結自動載入存檔成功！等級：', importRes.mergedLevel);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  } catch (e) {}
+
   new ClashRoyaleApp();
 });

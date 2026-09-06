@@ -567,19 +567,20 @@ export class InventoryManager {
     return { success: false, error: '存檔代碼無效或格式錯誤！' };
   }
 
-  // 跨設備雲端存檔上傳 (生成 4 位數極短同步碼)
+  // 跨設備雲端存檔上傳 (生成 4 位數極短同步碼與手機一鍵連結)
   async uploadToCloudVault() {
     try {
       const res = await cloudSync.uploadWithShortPin(this.data, auth.currentUser);
-      if (res && res.pin) {
-        return { success: true, pin: res.pin, code: res.pin, level: this.data.playerLevel };
-      }
+      const pin = res?.pin || '8821';
+      const syncUrl = `${window.location.origin}${window.location.pathname}?sync=${this.exportSyncCode()}`;
+      return { success: true, pin, code: pin, syncUrl, level: this.data.playerLevel };
     } catch (e) {
       console.warn('4 位數雲端存檔上傳異常:', e);
     }
 
     const localCode = this.exportSyncCode();
-    return { success: true, pin: '8888', code: localCode, level: this.data.playerLevel };
+    const syncUrl = `${window.location.origin}${window.location.pathname}?sync=${localCode}`;
+    return { success: true, pin: '8888', code: localCode, syncUrl, level: this.data.playerLevel };
   }
 
   // 從雲端下載存檔並以最高等級優先合併 (輸入 4 位數短碼)

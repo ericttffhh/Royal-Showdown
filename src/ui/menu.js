@@ -340,6 +340,7 @@ export class MenuUI {
       try {
         const uploadRes = await inventory.uploadToCloudVault();
         const code = uploadRes?.pin || uploadRes?.code || String(uploadRes);
+        this.lastSyncUrl = uploadRes?.syncUrl || `${window.location.origin}${window.location.pathname}?sync=${inventory.exportSyncCode()}`;
         const resBox = document.getElementById('cloud-sync-result-box');
         const codeText = document.getElementById('cloud-sync-code-text');
         if (resBox && codeText) {
@@ -347,7 +348,7 @@ export class MenuUI {
           resBox.classList.remove('hidden');
         }
         sounds.playFanfare();
-        this.showAnnouncement(`☁️ 4 位數同步碼已生成：【${code}】！在手機輸入即可同步！`);
+        this.showAnnouncement(`☁️ 4 位同步碼【${code}】已生成！亦可點擊複製一鍵連結！`);
       } catch (e) {
         this.showAnnouncement('❌ 上傳失敗，請重試');
       } finally {
@@ -405,6 +406,19 @@ export class MenuUI {
         } else {
           prompt('請手動複製同步碼：', code);
         }
+      }
+    });
+
+    document.getElementById('btn-copy-sync-url')?.addEventListener('click', () => {
+      const syncUrl = this.lastSyncUrl || `${window.location.origin}${window.location.pathname}?sync=${inventory.exportSyncCode()}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(syncUrl).then(() => {
+          this.showAnnouncement('🔗 手機一鍵同步連結已複製！在手機瀏覽器開啟即可秒同步！');
+        }).catch(() => {
+          prompt('請複製手機一鍵同步連結：', syncUrl);
+        });
+      } else {
+        prompt('請複製手機一鍵同步連結：', syncUrl);
       }
     });
 
