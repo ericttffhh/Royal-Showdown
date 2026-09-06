@@ -250,6 +250,7 @@ export class MenuUI {
       const usernameInput = document.getElementById('login-username-input').value;
       const passwordInput = document.getElementById('login-password-input').value;
       const errEl = document.getElementById('login-error-msg');
+      const prevUserId = auth.currentUser ? auth.currentUser.id : null;
 
       const res = auth.signIn(usernameInput, passwordInput);
       if (res.success) {
@@ -257,7 +258,7 @@ export class MenuUI {
         sounds.playVictory();
         this.authModal.classList.add('hidden');
         this.menuOverlay.classList.remove('hidden');
-        this.refreshUserData();
+        this.refreshUserData(prevUserId);
         this.showAnnouncement(`👑 歡迎領主回來：${res.user.username}！`);
       } else {
         errEl.textContent = res.error;
@@ -269,6 +270,7 @@ export class MenuUI {
       const usernameInput = document.getElementById('signup-username-input').value;
       const passwordInput = document.getElementById('signup-password-input').value;
       const errEl = document.getElementById('signup-error-msg');
+      const prevUserId = auth.currentUser ? auth.currentUser.id : null;
 
       const res = auth.signUp(usernameInput, passwordInput, this.selectedSignupAvatar);
       if (res.success) {
@@ -276,7 +278,7 @@ export class MenuUI {
         sounds.playVictory();
         this.authModal.classList.add('hidden');
         this.menuOverlay.classList.remove('hidden');
-        this.refreshUserData();
+        this.refreshUserData(prevUserId);
         this.showAnnouncement(`🎉 恭喜建立專屬帳號：${res.user.username}！`);
       } else {
         errEl.textContent = res.error;
@@ -1415,19 +1417,20 @@ export class MenuUI {
   }
 
   async handleGoogleAuth(isLinking = false) {
+    const prevUserId = auth.currentUser ? auth.currentUser.id : null;
     const res = await auth.triggerRealGoogleAuth(isLinking);
     if (res && res.success) {
       sounds.playVictory();
       this.authModal.classList.add('hidden');
       this.menuOverlay.classList.remove('hidden');
-      this.refreshUserData();
+      this.refreshUserData(prevUserId);
       if (isLinking) {
         this.openProfileModal();
-        this.showAnnouncement(`✨ 已成功綁定真實 Google: ${res.user.email}`);
+        this.showAnnouncement(`✨ 已成功綁定真實 Google: ${res.user.email} (進度已同步)`);
       } else {
         if (res.isNew) {
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-          this.showAnnouncement(`🎉 歡迎真實 Google 領主：${res.user.username}！`);
+          this.showAnnouncement(`🎉 歡迎 Google 領主：${res.user.username} (進度已同步)！`);
         } else {
           this.showAnnouncement(`👑 歡迎 Google 領主回來：${res.user.username}！`);
         }
@@ -1437,8 +1440,8 @@ export class MenuUI {
     }
   }
 
-  refreshUserData() {
-    inventory.switchUser();
+  refreshUserData(prevUserId = null) {
+    inventory.switchUser(prevUserId);
     this.updateCurrencyUI();
     this.deckBuilder?.renderAll();
     const pNameEl = document.getElementById('player-name');

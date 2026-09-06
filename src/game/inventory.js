@@ -52,12 +52,13 @@ export class InventoryManager {
     };
   }
 
-  loadData() {
+  loadData(targetUserId = null) {
     try {
-      const key = this.getStorageKey();
+      const key = targetUserId ? `royal_clash_save_user_${targetUserId}` : this.getStorageKey();
       const raw = localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
+        if (!parsed.cards) parsed.cards = {};
         Object.keys(CARDS).forEach(id => {
           if (!parsed.cards[id]) {
             parsed.cards[id] = { level: 1, count: 8 };
@@ -85,17 +86,96 @@ export class InventoryManager {
     return this.getDefaultData();
   }
 
+  // 帳號資料衝突與等級優先同步合併器 (打架時以等級高者優先同步)
+  resolveConflictWithHighestLevel(dataA, dataB) {
+    if (!dataA && !dataB) return this.getDefaultData();
+    if (!dataA) return dataB;
+    if (!dataB) return dataA;
+
+    // 計算雙方進度權重評分：等級最高優先權，其次為經驗值、獎盃與資源
+    const scoreA = (dataA.playerLevel || 1) * 1000000 + (dataA.playerExp || 0) * 1000 + (dataA.trophies || 0) * 10 + (dataA.gold || 0) * 0.01;
+    const scoreB = (dataB.playerLevel || 1) * 1000000 + (dataB.playerExp || 0) * 1000 + (dataB.trophies || 0) * 10 + (dataB.gold || 0) * 0.01;
+
+    // 以等級高者作為基底
+    const higherBase = scoreA >= scoreB ? JSON.parse(JSON.stringify(dataA)) : JSON.parse(JSON.stringify(dataB));
+    const other = scoreA >= scoreB ? dataB : dataA;
+
+    // 1. 卡牌數據融合：保留卡牌最高等級，碎片數量相加
+    if (!higherBase.cards) higherBase.cards = {};
+    Object.keys(CARDS).forEach(cardId => {
+      const c1 = higherBase.cards[cardId] || { level: 1, count: 0 };
+      const c2 = other.cards?.[cardId] || { level: 1, count: 0 };
+      higherBase.cards[cardId] = {
+        level: Math.max(c1.level || 1, c2.level || 1),
+        count: (c1.count || 0) + (c2.count || 0)
+      };
+    });
+
+    // 2. 資源取較高者，絕不降級
+    higherBase.gold = Math.max(higherBase.gold || 0, other.gold || 0);
+    higherBase.gems = Math.max(higherBase.gems || 0, other.gems || 0);
+    higherBase.crowns = Math.max(higherBase.crowns || 0, other.crowns || 0);
+    higherBase.trophies = Math.max(higherBase.trophies || 1000, other.trophies || 1000);
+
+    // 3. 等級與經驗值取最高
+    if ((other.playerLevel || 1) > (higherBase.playerLevel || 1)) {
+      higherBase.playerLevel = other.playerLevel;
+      higherBase.playerExp = other.playerExp;
+    } else if ((other.playerLevel || 1) === (higherBase.playerLevel || 1)) {
+      higherBase.playerExp = Math.max(higherBase.playerExp || 0, other.playerExp || 0);
+    }
+
+    // 4. 通行證特權保留
+    higherBase.hasGoldPass = higherBase.hasGoldPass || other.hasGoldPass || false;
+
+    // 5. 獎勵領取記錄去重合併
+    higherBase.claimedTrophies = Array.from(new Set([...(higherBase.claimedTrophies || []), ...(other.claimedTrophies || [])]));
+    higherBase.claimedLevelRewards = Array.from(new Set([...(higherBase.claimedLevelRewards || []), ...(other.claimedLevelRewards || [])]));
+    higherBase.claimedDailyRewards = Array.from(new Set([...(higherBase.claimedDailyRewards || []), ...(other.claimedDailyRewards || [])]));
+    higherBase.claimedPassFree = Array.from(new Set([...(higherBase.claimedPassFree || []), ...(other.claimedPassFree || [])]));
+    higherBase.claimedPassGold = Array.from(new Set([...(higherBase.claimedPassGold || []), ...(other.claimedPassGold || [])]));
+
+    return higherBase;
+  }
+
   saveData() {
     try {
       const key = this.getStorageKey();
       localStorage.setItem(key, JSON.stringify(this.data));
+
+      // 同步更新當前登入帳號的 level 與 exp
+      if (auth.currentUser) {
+        auth.currentUser.level = this.data.playerLevel || 1;
+        auth.currentUser.exp = this.data.playerExp || 0;
+        auth.saveAccounts();
+      }
     } catch (e) {
       console.error('儲存失敗:', e);
     }
   }
 
-  switchUser() {
-    this.data = this.loadData();
+  switchUser(previousUserId = null) {
+    const currentUserId = auth.currentUser ? auth.currentUser.id : 'guest';
+
+    if (previousUserId && previousUserId !== currentUserId) {
+      // 檢查前一個帳號與當前帳號的進度
+      const prevData = this.loadData(previousUserId);
+      const currData = this.loadData(currentUserId);
+
+      // 當資料衝突時，以等級高者優先同步合併
+      const synced = this.resolveConflictWithHighestLevel(prevData, currData);
+      this.data = synced;
+      this.saveData();
+    } else {
+      this.data = this.loadData();
+    }
+
+    if (auth.currentUser) {
+      auth.currentUser.level = this.data.playerLevel || 1;
+      auth.currentUser.exp = this.data.playerExp || 0;
+      auth.saveAccounts();
+    }
+
     return this.data;
   }
 
