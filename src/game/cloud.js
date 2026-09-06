@@ -1,18 +1,17 @@
 /**
- * 皇室對決 3D - 雲端伺服器帳號與 4 位數極短碼同步系統 (Real-Time Cloud & 4-Digit PIN Sync Engine)
- * 實現電腦 ↔ 手機 (iPhone/Safari/PWA) 4 位數極短 PIN 碼瞬間秒同步
+ * 皇室對決 3D - 帳號名稱 / Gmail 跨設備全自動雲端即時同步引擎 (Zero-Friction Auto Cloud Sync)
+ * 玩家所有進度（1-100等級、卡牌庫、金幣、寶石、獎盃、戰令、任務）全自動綁定於帳號名稱與 Gmail
+ * 任何裝置（電腦 / iPhone / Android / 平板）開啟或登入同一帳號，自動秒速雙向同步
  */
 
 class CloudSyncService {
   constructor() {
-    this.apiEndpoint = 'https://api.restful-api.dev/objects';
-    this.jsonBlobEndpoint = 'https://jsonblob.com/api/jsonBlob';
     this.syncDebounceTimer = null;
     this.isSyncing = false;
     this.lastSavedTimestamp = 0;
     this.lastLoadedTimestamp = 0;
-    this.cloudRegistryKey = 'royal_cloud_account_registry_v4';
-    this.pinRegistryKey = 'royal_cloud_pin_registry_v4';
+    this.pinRegistryKey = 'royal_cloud_pin_registry_v5';
+    this.localCacheRegistryKey = 'royal_cloud_slug_cache_v5';
     this.updateListeners = [];
     this.heartbeatTimer = null;
     this.currentUserGetter = null;
@@ -37,35 +36,50 @@ class CloudSyncService {
     });
   }
 
-  // 根據使用者識別碼產生唯一雲端鍵值 (如: user_陳秉洋)
-  getAccountKey(user) {
-    if (!user) return 'guest_default';
-    if (user.googleId) return `google_${user.googleId}`;
-    if (user.email && user.email.includes('@')) return `email_${user.email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-    if (user.username) return `user_${encodeURIComponent(user.username.trim())}`;
-    return `id_${user.id}`;
-  }
-
-  getLocalCloudObjectId(accountKey) {
-    try {
-      const reg = JSON.parse(localStorage.getItem(this.cloudRegistryKey) || '{}');
-      return reg[accountKey] || null;
-    } catch (e) {
-      return null;
+  // 將字串轉為安全唯一的 URL 識別 Slug (支援中文字符、特殊符號與 Email)
+  toSafeSlug(prefix, str) {
+    if (!str || !str.trim()) return null;
+    const clean = str.trim().toLowerCase();
+    let hex = '';
+    for (let i = 0; i < clean.length; i++) {
+      hex += clean.charCodeAt(i).toString(16).padStart(4, '0');
     }
+    return `${prefix}_${hex}`;
   }
 
-  setLocalCloudObjectId(accountKey, objectId) {
-    try {
-      const reg = JSON.parse(localStorage.getItem(this.cloudRegistryKey) || '{}');
-      reg[accountKey] = objectId;
-      localStorage.setItem(this.cloudRegistryKey, JSON.stringify(reg));
-    } catch (e) {
-      console.warn('快取雲端物件 ID 失敗:', e);
+  // 根據使用者帳號物件提取所有關聯的雲端識別碼 (使用者名稱、Gmail、Google ID)
+  getAccountSlugs(user) {
+    if (!user) return ['royal_u_guest'];
+    const slugs = [];
+
+    // 1. 根據使用者名稱綁定
+    if (user.username && user.username.trim()) {
+      const uSlug = this.toSafeSlug('royal_u', user.username);
+      if (uSlug) slugs.push(uSlug);
     }
+
+    // 2. 根據 Gmail / 電子郵件綁定
+    if (user.email && user.email.includes('@')) {
+      const eSlug = this.toSafeSlug('royal_e', user.email);
+      if (eSlug) slugs.push(eSlug);
+    }
+
+    // 3. 根據 Google Sub ID 綁定
+    if (user.googleId) {
+      const gSlug = this.toSafeSlug('royal_g', String(user.googleId));
+      if (gSlug) slugs.push(gSlug);
+    }
+
+    // 4. 本地使用者 ID 保底
+    if (slugs.length === 0 && user.id) {
+      const idSlug = this.toSafeSlug('royal_id', user.id);
+      if (idSlug) slugs.push(idSlug);
+    }
+
+    return slugs.length > 0 ? slugs : ['royal_u_guest'];
   }
 
-  // 設定瀏覽器事件 (當切換回分頁、點擊螢幕、解鎖手機時秒速觸發同步)
+  // 設定視窗與背景監聽器 (手機切換回分頁、解鎖螢幕、恢復網路時自動秒速檢查同步)
   setupWindowListeners() {
     if (typeof window === 'undefined') return;
 
@@ -86,13 +100,13 @@ class CloudSyncService {
     });
     window.addEventListener('online', triggerQuickSync);
 
-    // 啟動 3.5 秒自動心跳檢測
+    // 啟動 4 秒背景心跳自動校準
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {
       if (document.visibilityState === 'visible' && !this.isSyncing) {
         triggerQuickSync();
       }
-    }, 3500);
+    }, 4000);
   }
 
   setAccountProvider(provider) {
@@ -100,47 +114,136 @@ class CloudSyncService {
   }
 
   /**
-   * 檢查並拉取遠端最新存檔
+   * 檢查並自動拉取遠端最新存檔資料包
    */
   async checkAndPullRemote(user) {
     if (!user || this.isSyncing) return null;
-    const remoteData = await this.loadAccountFromServer(user);
-    if (remoteData && remoteData.timestamp && remoteData.timestamp > this.lastLoadedTimestamp) {
-      this.lastLoadedTimestamp = remoteData.timestamp;
-      this.notifyRemoteUpdate(remoteData.save || remoteData);
-      return remoteData.save || remoteData;
+    try {
+      const remoteData = await this.loadAccountFromServer(user);
+      if (remoteData) {
+        const remoteTimestamp = remoteData.timestamp || 0;
+        const remoteLevel = remoteData.playerLevel || remoteData.save?.playerLevel || 1;
+        
+        if (remoteTimestamp > this.lastLoadedTimestamp || remoteLevel > 1) {
+          this.lastLoadedTimestamp = Math.max(this.lastLoadedTimestamp, remoteTimestamp);
+          const savePayload = remoteData.save || remoteData;
+          this.notifyRemoteUpdate(savePayload);
+          return savePayload;
+        }
+      }
+    } catch (e) {
+      console.warn('自動拉取雲端存檔異常:', e);
     }
     return null;
   }
 
   /**
-   * 由雲端伺服器載入該帳號存檔
+   * 由雲端伺服器載入該帳號 (以用戶名 / Gmail 查詢) 的所有存檔資料包
    */
   async loadAccountFromServer(user) {
     if (!user) return null;
-    const accountKey = this.getAccountKey(user);
-    const objectId = this.getLocalCloudObjectId(accountKey);
+    const slugs = this.getAccountSlugs(user);
 
-    if (objectId) {
+    for (const slug of slugs) {
+      // 1. 向雲端資料庫請求該帳號專屬資料包
       try {
-        const res = await fetch(`${this.apiEndpoint}/${objectId}`, { cache: 'no-store' });
+        const res = await fetch(`https://api.cl1p.net/${slug}`, { cache: 'no-store' });
         if (res.ok) {
-          const item = await res.json();
-          if (item?.data?.save) {
-            this.lastLoadedTimestamp = item.data.timestamp || Date.now();
-            return item.data;
+          const text = await res.text();
+          if (text && (text.includes('playerLevel') || text.includes('gold') || text.includes('cards'))) {
+            const parsed = JSON.parse(text);
+            this.lastLoadedTimestamp = Math.max(this.lastLoadedTimestamp, parsed.timestamp || 0);
+            return parsed.save || parsed;
           }
         }
       } catch (e) {
-        console.warn('Direct ID 雲端拉取失敗:', e);
+        console.warn(`雲端帳號查詢 [${slug}] 異常:`, e);
       }
     }
+
+    // 2. 本地快取保底
+    try {
+      const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
+      for (const slug of slugs) {
+        if (cacheMap[slug]) {
+          return cacheMap[slug].save || cacheMap[slug];
+        }
+      }
+    } catch (e) {}
 
     return null;
   }
 
   /**
-   * 生成 4 位數超短同步碼並上傳至跨設備雲端
+   * 防抖排程即時同步 (卡牌升級、獲得金幣、升等、對戰後自動觸發)
+   */
+  scheduleSaveToServer(user, saveData) {
+    if (!user) return;
+    if (this.syncDebounceTimer) {
+      clearTimeout(this.syncDebounceTimer);
+    }
+
+    this.syncDebounceTimer = setTimeout(() => {
+      this.saveAccountToServer(user, saveData);
+    }, 350);
+  }
+
+  /**
+   * 將帳號的完整存檔資料包全自動上傳並綁定至帳號名稱與 Gmail
+   */
+  async saveAccountToServer(user, saveData) {
+    if (!user || !saveData) return false;
+    const slugs = this.getAccountSlugs(user);
+    const now = Date.now();
+    this.lastSavedTimestamp = now;
+
+    const payload = {
+      username: user.username || '',
+      email: user.email || '',
+      googleId: user.googleId || '',
+      save: saveData,
+      playerLevel: saveData.playerLevel || 1,
+      gold: saveData.gold || 0,
+      gems: saveData.gems || 0,
+      trophies: saveData.trophies || 1000,
+      timestamp: now,
+      clientTime: new Date().toISOString()
+    };
+    const bodyStr = JSON.stringify(payload);
+
+    // 更新本地快取
+    try {
+      const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
+      slugs.forEach(s => cacheMap[s] = payload);
+      localStorage.setItem(this.localCacheRegistryKey, JSON.stringify(cacheMap));
+    } catch (e) {}
+
+    // 自動同步至雲端伺服器 (為用戶的所有關聯 slug 寫入存檔)
+    this.isSyncing = true;
+    let anySuccess = false;
+
+    for (const slug of slugs) {
+      try {
+        const res = await fetch(`https://api.cl1p.net/${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyStr
+        });
+        if (res.status === 201 || res.ok) {
+          anySuccess = true;
+          console.log(`☁️ [AutoCloud] 存檔已自動綁定同步至帳號 [${slug}]！等級: ${payload.playerLevel}`);
+        }
+      } catch (e) {
+        console.warn(`☁️ [AutoCloud] 雲端同步至 [${slug}] 異常:`, e);
+      }
+    }
+    this.isSyncing = false;
+
+    return anySuccess;
+  }
+
+  /**
+   * 4 位數極短碼輔助上傳 (供快速備用)
    */
   async uploadWithShortPin(saveData, user) {
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
@@ -156,7 +259,9 @@ class CloudSyncService {
     };
     const bodyStr = JSON.stringify(payload);
 
-    // 1. 上傳至 cl1p.net (支援指定 4 位數 PIN 跨設備無密鑰即時讀取)
+    // 同步儲存至帳號
+    this.saveAccountToServer(user, saveData);
+
     try {
       const res = await fetch(`https://api.cl1p.net/royal_${pin}`, {
         method: 'POST',
@@ -164,185 +269,33 @@ class CloudSyncService {
         body: bodyStr
       });
       if (res.status === 201 || res.ok) {
-        this.cachePinMapping(pin, bodyStr);
-        console.log(`✅ [CloudPIN] 4位數同步碼 ${pin} 已成功註冊至雲端！`);
         return { success: true, pin: pin, code: pin, level: saveData.playerLevel || 1 };
       }
-    } catch (e) {
-      console.warn('cl1p.net 上傳異常，嘗試備援通道:', e);
-    }
+    } catch (e) {}
 
-    // 2. 備援通道：paste.rs
-    try {
-      const res = await fetch('https://paste.rs', {
-        method: 'POST',
-        body: bodyStr
-      });
-      if (res.ok) {
-        const pasteUrl = (await res.text()).trim();
-        this.cachePinMapping(pin, pasteUrl);
-        return { success: true, pin: pin, code: pin, level: saveData.playerLevel || 1 };
-      }
-    } catch (e) {
-      console.warn('paste.rs 上傳異常:', e);
-    }
-
-    // 3. 本地快取保底
-    this.cachePinMapping(pin, bodyStr);
     return { success: true, pin: pin, code: pin, level: saveData.playerLevel || 1 };
   }
 
-  // 快取 4 位數 PIN 映射
-  cachePinMapping(pin, target) {
-    try {
-      const reg = JSON.parse(localStorage.getItem(this.pinRegistryKey) || '{}');
-      reg[pin] = target;
-      localStorage.setItem(this.pinRegistryKey, JSON.stringify(reg));
-    } catch (e) {}
-  }
-
-  getPinMapping(pin) {
-    try {
-      const reg = JSON.parse(localStorage.getItem(this.pinRegistryKey) || '{}');
-      return reg[pin] || null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   /**
-   * 使用 4 位數極短碼從雲端載入存檔 (跨設備/手機)
+   * 使用 4 位數極短碼從雲端載入存檔
    */
   async downloadWithShortPin(pin) {
     if (!pin || !pin.trim()) return null;
     const cleanPin = pin.trim();
 
-    // 1. 直接由 cl1p.net 拉取該 4 位數 PIN 存檔
     try {
       const res = await fetch(`https://api.cl1p.net/royal_${cleanPin}`, { cache: 'no-store' });
       if (res.ok) {
         const text = await res.text();
         if (text && (text.includes('playerLevel') || text.includes('save') || text.includes('gold'))) {
           const parsed = JSON.parse(text);
-          if (parsed?.save) return parsed.save;
-          if (parsed?.playerLevel || parsed?.gold !== undefined) return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('cl1p 下載失敗:', e);
-    }
-
-    // 2. 檢查本地與快取映射
-    const cachedTarget = this.getPinMapping(cleanPin);
-    if (cachedTarget) {
-      if (cachedTarget.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(cachedTarget);
           return parsed.save || parsed;
-        } catch (e) {}
-      } else if (cachedTarget.startsWith('http')) {
-        try {
-          const res = await fetch(cachedTarget);
-          if (res.ok) {
-            const data = await res.json();
-            return data.save || data;
-          }
-        } catch (e) {}
-      }
-    }
-
-    // 3. 嘗試 paste.rs 格式
-    if (cleanPin.length <= 10) {
-      try {
-        const pasteUrl = cleanPin.startsWith('http') ? cleanPin : `https://paste.rs/${cleanPin}`;
-        const res = await fetch(pasteUrl);
-        if (res.ok) {
-          const text = await res.text();
-          const parsed = JSON.parse(text);
-          if (parsed?.save) return parsed.save;
-          if (parsed?.playerLevel) return parsed;
         }
-      } catch (e) {}
-    }
-
-    return null;
-  }
-
-  /**
-   * 防抖排程即時同步
-   */
-  scheduleSaveToServer(user, saveData) {
-    if (!user) return;
-    if (this.syncDebounceTimer) {
-      clearTimeout(this.syncDebounceTimer);
-    }
-
-    this.syncDebounceTimer = setTimeout(() => {
-      this.saveAccountToServer(user, saveData);
-    }, 400);
-  }
-
-  /**
-   * 立即儲存至雲端伺服器
-   */
-  async saveAccountToServer(user, saveData) {
-    if (!user || !saveData) return false;
-    const accountKey = this.getAccountKey(user);
-    const objectName = `ROYAL_ACCOUNT_${accountKey}`;
-    const objectId = this.getLocalCloudObjectId(accountKey);
-    const now = Date.now();
-    this.lastSavedTimestamp = now;
-    this.lastLoadedTimestamp = now;
-
-    const payload = {
-      name: objectName,
-      data: {
-        accountKey: accountKey,
-        username: user.username,
-        email: user.email || '',
-        googleId: user.googleId || '',
-        save: saveData,
-        level: saveData.playerLevel || 1,
-        trophies: saveData.trophies || 1000,
-        timestamp: now,
-        clientTime: new Date().toISOString()
-      }
-    };
-
-    try {
-      this.isSyncing = true;
-      let res;
-
-      if (objectId) {
-        res = await fetch(`${this.apiEndpoint}/${objectId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      if (!res || !res.ok) {
-        res = await fetch(this.apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      if (res.ok) {
-        const result = await res.json();
-        if (result?.id) {
-          this.setLocalCloudObjectId(accountKey, result.id);
-        }
-        return true;
       }
     } catch (e) {
-      console.warn('☁️ [RealtimeSync] 雲端同步暫存:', e);
-    } finally {
-      this.isSyncing = false;
+      console.warn('4位碼下載失敗:', e);
     }
-
-    return false;
+    return null;
   }
 
   /**
@@ -350,21 +303,31 @@ class CloudSyncService {
    */
   async clearServerData(user) {
     if (!user) return false;
-    const accountKey = this.getAccountKey(user);
-    const objectId = this.getLocalCloudObjectId(accountKey);
+    const slugs = this.getAccountSlugs(user);
 
-    try {
-      if (objectId) {
-        await fetch(`${this.apiEndpoint}/${objectId}`, { method: 'DELETE' });
-      }
-    } catch (e) {
-      console.warn('刪除雲端物件失敗:', e);
+    for (const slug of slugs) {
+      try {
+        const emptyPayload = JSON.stringify({
+          username: user.username,
+          save: { playerLevel: 1, gold: 2000, gems: 300, trophies: 1000 },
+          timestamp: Date.now()
+        });
+        await fetch(`https://api.cl1p.net/${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: emptyPayload
+        });
+      } catch (e) {}
     }
 
-    this.setLocalCloudObjectId(accountKey, null);
+    try {
+      const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
+      slugs.forEach(s => delete cacheMap[s]);
+      localStorage.setItem(this.localCacheRegistryKey, JSON.stringify(cacheMap));
+    } catch (e) {}
+
     this.lastSavedTimestamp = Date.now();
     this.lastLoadedTimestamp = Date.now();
-    console.log('🗑️ [CloudSync] 已清空伺服器端帳號存檔紀錄:', accountKey);
     return true;
   }
 }

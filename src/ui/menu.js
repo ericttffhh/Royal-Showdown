@@ -312,7 +312,27 @@ export class MenuUI {
       }
     });
 
-    // ☁️ 4 位數極短碼雲端存檔同步 (電腦 ↔ 手機 1 秒連動)
+    // ☁️ 帳號名稱 / Gmail 全自動雲端同步 (電腦 ↔ 手機 1 秒連動)
+    const forceSyncBtn = document.getElementById('btn-force-cloud-sync');
+    forceSyncBtn?.addEventListener('click', async () => {
+      forceSyncBtn.disabled = true;
+      forceSyncBtn.textContent = '⏳ 正在向雲端檢查...';
+      try {
+        await inventory.syncWithServer((data) => {
+          this.refreshUserData();
+          this.openProfileModal();
+        });
+        sounds.playVictory();
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+        this.showAnnouncement(`🎉 雲端存檔已同步！當前領主等級：Level ${inventory.data.playerLevel}`);
+      } catch (e) {
+        this.showAnnouncement('❌ 雲端同步異常，請確認網路連線');
+      } finally {
+        forceSyncBtn.disabled = false;
+        forceSyncBtn.textContent = '🔄 立即向雲端檢查同步';
+      }
+    });
+
     const uploadBtn = document.getElementById('btn-cloud-upload');
     uploadBtn?.addEventListener('click', async () => {
       uploadBtn.disabled = true;
@@ -332,7 +352,7 @@ export class MenuUI {
         this.showAnnouncement('❌ 上傳失敗，請重試');
       } finally {
         uploadBtn.disabled = false;
-        uploadBtn.textContent = '📤 上傳存檔 (獲取 4 位同步碼)';
+        uploadBtn.textContent = '📤 生成 4 位同步碼 (備用)';
       }
     });
 
@@ -358,7 +378,7 @@ export class MenuUI {
         this.showAnnouncement('❌ 載入失敗，請檢查網路連線');
       } finally {
         downloadBtn.disabled = false;
-        downloadBtn.textContent = '📥 輸入 4 位同步碼載入';
+        downloadBtn.textContent = '📥 輸入 4 位同步碼';
       }
     });
 
@@ -1490,11 +1510,17 @@ export class MenuUI {
     const cEl = document.getElementById('profile-stat-crowns');
     const wEl = document.getElementById('profile-stat-wins');
     const kEl = document.getElementById('profile-stat-cards');
+    const cloudStatusEl = document.getElementById('cloud-dock-user-status');
 
     if (tEl) tEl.textContent = `${inventory.data.trophies} 🏆`;
     if (cEl) cEl.textContent = `${inventory.data.crowns} 👑`;
     if (wEl) wEl.textContent = `${inventory.data.replays?.filter(r => r.result === 'win').length || 0} ⚔️`;
     if (kEl) kEl.textContent = `${Object.keys(inventory.data.cards).length} 🎴`;
+
+    if (cloudStatusEl) {
+      const boundId = user.email || user.username || '本地帳號';
+      cloudStatusEl.textContent = `💡 所有等級 (${inventory.data.playerLevel} 級)、金幣 (${inventory.data.gold})、卡牌已全自動綁定於【${boundId}】！在手機或任何裝置登入此帳號即可自動同步！`;
+    }
 
     this.profileModal.classList.remove('hidden');
   }

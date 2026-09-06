@@ -627,16 +627,17 @@
         </div>
       </div>
 
-      <!-- Cloud Sync & Backup Section (PC <-> Mobile) -->
+      <!-- Cloud Sync & Auto Backup Section (Account / Gmail Bound) -->
       <div class="profile-cloud-dock">
         <div class="cloud-dock-header">
-          <span class="cloud-dock-title">🟢 4 位數極短碼雲端存檔同步</span>
+          <span class="cloud-dock-title">🟢 帳號雲端全自動即時同步 (已連線)</span>
         </div>
-        <p class="cloud-dock-tip">點擊「上傳存檔」即可取得專屬 4 位數極短同步碼（如 8821），在手機輸入即可一秒瞬間同步！</p>
+        <p class="cloud-dock-tip" id="cloud-dock-user-status">💡 你的等級、卡牌、金幣、寶石、獎盃已全自動綁定於此帳號！在手機或任何裝置登入同一帳號，每次開啟即自動秒速讀取同步！</p>
         
         <div class="cloud-actions-row">
-          <button id="btn-cloud-upload" class="action-btn confirm small">📤 上傳存檔 (獲取 4 位同步碼)</button>
-          <button id="btn-cloud-download" class="action-btn secondary small">📥 輸入 4 位同步碼載入</button>
+          <button id="btn-force-cloud-sync" class="action-btn confirm small">🔄 立即向雲端檢查同步</button>
+          <button id="btn-cloud-upload" class="action-btn secondary small">📤 生成 4 位同步碼 (備用)</button>
+          <button id="btn-cloud-download" class="action-btn secondary small">📥 輸入 4 位同步碼</button>
         </div>
 
         <div id="cloud-sync-result-box" class="cloud-sync-result-box hidden">

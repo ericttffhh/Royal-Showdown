@@ -126,28 +126,37 @@ export class AuthManager {
     return { success: true, user: newUser };
   }
 
-  // 本地/雲端帳號登入 (支援跨設備自動識別與同步)
+  // 本地/雲端帳號登入 (支援跨設備以帳號名稱或 Gmail 自動識別與同步)
   async signIn(username, password) {
     const trimmed = username.trim();
-    let user = this.accounts.find(a => a.username.toLowerCase() === trimmed.toLowerCase());
+    if (!trimmed) return { success: false, error: '請輸入用戶名稱或 Gmail！' };
+
+    let user = this.accounts.find(a => 
+      a.username.toLowerCase() === trimmed.toLowerCase() || 
+      (a.email && a.email.toLowerCase() === trimmed.toLowerCase())
+    );
 
     // 若本機尚未記錄該帳號 (例如手機新開)，向雲端伺服器查詢
     if (!user) {
       try {
-        const remoteData = await cloudSync.loadAccountFromServer({ username: trimmed });
+        const queryUser = {
+          username: trimmed,
+          email: trimmed.includes('@') ? trimmed : ''
+        };
+        const remoteData = await cloudSync.loadAccountFromServer(queryUser);
         if (remoteData) {
           const importedUser = {
             id: 'user_' + Date.now().toString(36),
-            username: trimmed,
+            username: remoteData.username || trimmed,
             password: password,
-            email: remoteData.email || '',
+            email: remoteData.email || (trimmed.includes('@') ? trimmed : ''),
             authType: 'local',
             avatar: '👑',
             avatarUrl: null,
-            level: remoteData.level || 1,
-            exp: 0,
+            level: remoteData.playerLevel || remoteData.level || 1,
+            exp: remoteData.playerExp || 0,
             createdAt: new Date().toLocaleDateString('zh-TW'),
-            googleId: null
+            googleId: remoteData.googleId || null
           };
           this.accounts.push(importedUser);
           this.saveAccounts();
