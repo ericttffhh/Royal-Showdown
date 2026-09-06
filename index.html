@@ -212,6 +212,98 @@
     </div>
   </div>
 
+  <!-- Dedicated Royal Shop & Chest Vault Modal -->
+  <div id="shop-modal" class="modal-backdrop hidden">
+    <div class="dialog-card super-large shop-panel">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">🎁 皇家寶箱商城與抽卡殿堂</h2>
+        <button id="btn-close-shop" class="action-btn cancel small">返回大廳</button>
+      </div>
+      <p class="panel-tip">開啟皇家寶箱抽取全新原創傳奇兵團、金幣與寶石！或在特惠商店直接購買專屬兵團碎片！</p>
+
+      <!-- Section 1: 4 大皇家寶箱 -->
+      <div class="shop-section-title">👑 皇家傳奇寶箱抽取</div>
+      <div class="shop-chests-grid">
+        <div class="shop-chest-card silver">
+          <div class="chest-card-glow"></div>
+          <div class="chest-big-icon">📦</div>
+          <div class="chest-card-name">白銀寶箱</div>
+          <div class="chest-card-desc">包含 100~250 🪙 金幣，保證 5~10 張隨機兵團碎片</div>
+          <button class="shop-buy-chest-btn silver" data-chest="silver">
+            <span>🪙 100 金幣開啟</span>
+          </button>
+        </div>
+
+        <div class="shop-chest-card crown">
+          <div class="chest-card-glow"></div>
+          <div class="chest-big-icon">👑</div>
+          <div class="chest-card-name">皇冠寶箱</div>
+          <div class="chest-card-desc">包含 300~600 🪙 金幣，10 💎 寶石，高機率獲得稀有與史詩卡牌</div>
+          <button class="shop-buy-chest-btn crown" data-chest="crown">
+            <span>👑 5 皇冠開啟</span>
+          </button>
+        </div>
+
+        <div class="shop-chest-card magic">
+          <div class="chest-card-glow"></div>
+          <div class="chest-big-icon">🔮</div>
+          <div class="chest-card-name">神奇魔法寶箱</div>
+          <div class="chest-card-desc">包含 800~1500 🪙 金幣，25 💎 寶石，必得 2 張史詩卡牌</div>
+          <button class="shop-buy-chest-btn magic" data-chest="magic">
+            <span>💎 80 寶石開啟</span>
+          </button>
+        </div>
+
+        <div class="shop-chest-card legendary">
+          <div class="chest-card-glow"></div>
+          <div class="chest-badge-top">100% 必出傳奇</div>
+          <div class="chest-big-icon">💎</div>
+          <div class="chest-card-name">超級傳奇寶箱</div>
+          <div class="chest-card-desc">包含 2500 🪙 金幣，100% 必中 4 大全新傳奇英雄卡牌之一！</div>
+          <button class="shop-buy-chest-btn legendary" data-chest="legendary">
+            <span>💎 200 寶石開啟</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 2: 每日精選特惠碎片 -->
+      <div class="shop-section-title" style="margin-top: 20px;">⚡ 每日兵團精選特惠碎片</div>
+      <div class="shop-daily-cards-grid" id="shop-daily-cards-grid"></div>
+
+      <!-- Section 3: 皇家金幣與寶石補給站 -->
+      <div class="shop-section-title" style="margin-top: 20px;">💎 皇家資源補給包</div>
+      <div class="shop-supplies-grid">
+        <div class="supply-card free-gems">
+          <div class="supply-icon">💎</div>
+          <div class="supply-title">每日免費寶石</div>
+          <div class="supply-val">+50 💎</div>
+          <button id="btn-claim-free-daily-gems" class="supply-buy-btn free">免費領取</button>
+        </div>
+
+        <div class="supply-card gold-bag">
+          <div class="supply-icon">🪙</div>
+          <div class="supply-title">一袋金幣</div>
+          <div class="supply-val">+1,000 🪙</div>
+          <button class="supply-buy-btn buy-gold" data-gems="50" data-gold="1000">💎 50 寶石</button>
+        </div>
+
+        <div class="supply-card gold-chest">
+          <div class="supply-icon">💰</div>
+          <div class="supply-title">大箱金幣</div>
+          <div class="supply-val">+4,500 🪙</div>
+          <button class="supply-buy-btn buy-gold" data-gems="200" data-gold="4500">💎 200 寶石</button>
+        </div>
+
+        <div class="supply-card gold-vault">
+          <div class="supply-icon">👑</div>
+          <div class="supply-title">國王黃金寶庫</div>
+          <div class="supply-val">+12,000 🪙</div>
+          <button class="supply-buy-btn buy-gold" data-gems="500" data-gold="12000">💎 500 寶石</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Player Level 1-100 Modal -->
   <div id="player-level-modal" class="modal-backdrop hidden">
     <div class="dialog-card large player-level-card">

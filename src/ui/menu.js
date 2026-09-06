@@ -38,6 +38,7 @@ export class MenuUI {
     this.menuOverlay = document.getElementById('menu-overlay');
     this.hudOverlay = document.getElementById('hud-overlay');
     this.deckModal = document.getElementById('deck-modal');
+    this.shopModal = document.getElementById('shop-modal');
     this.aiModal = document.getElementById('ai-modal');
     this.roomModal = document.getElementById('room-modal');
     this.cardsWikiModal = document.getElementById('cards-wiki-modal');
@@ -356,8 +357,19 @@ export class MenuUI {
     navShop?.addEventListener('click', () => {
       setNavActive(navShop);
       this.hideAllModals();
-      this.menuOverlay.classList.remove('hidden');
-      document.querySelector('.lobby-chest-dock')?.scrollIntoView({ behavior: 'smooth' });
+      this.openShopModal();
+    });
+
+    document.getElementById('btn-open-gold-shop')?.addEventListener('click', () => {
+      setNavActive(navShop);
+      this.hideAllModals();
+      this.openShopModal();
+    });
+
+    document.getElementById('btn-open-gem-shop')?.addEventListener('click', () => {
+      setNavActive(navShop);
+      this.hideAllModals();
+      this.openShopModal();
     });
 
     navWiki?.addEventListener('click', () => {
@@ -368,6 +380,12 @@ export class MenuUI {
 
     document.getElementById('btn-close-deck')?.addEventListener('click', () => {
       this.deckModal.classList.add('hidden');
+      this.menuOverlay.classList.remove('hidden');
+      setNavActive(navBattle);
+    });
+
+    document.getElementById('btn-close-shop')?.addEventListener('click', () => {
+      this.shopModal?.classList.add('hidden');
       this.menuOverlay.classList.remove('hidden');
       setNavActive(navBattle);
     });
@@ -1111,6 +1129,7 @@ export class MenuUI {
   hideAllModals() {
     this.menuOverlay.classList.add('hidden');
     this.deckModal.classList.add('hidden');
+    this.shopModal?.classList.add('hidden');
     this.cardsWikiModal.classList.add('hidden');
     this.aiModal.classList.add('hidden');
     this.roomModal.classList.add('hidden');
@@ -1125,6 +1144,112 @@ export class MenuUI {
     this.settingsModal?.classList.add('hidden');
     this.playerLevelModal?.classList.add('hidden');
     this.levelUpModal?.classList.add('hidden');
+    this.authModal?.classList.add('hidden');
+    this.profileModal?.classList.add('hidden');
+  }
+
+  // -------------------------------------------------------------
+  // 🎁 皇家寶箱商城與抽卡殿堂 UI
+  // -------------------------------------------------------------
+
+  openShopModal() {
+    this.hideAllModals();
+    if (!this.shopModal) return;
+
+    // Render Daily Special Deals
+    const dailyGrid = document.getElementById('shop-daily-cards-grid');
+    if (dailyGrid) {
+      dailyGrid.innerHTML = '';
+      const dailyDeals = [
+        { cardId: 'knight', count: 20, priceGold: 300 },
+        { cardId: 'wizard', count: 10, priceGold: 600 },
+        { cardId: 'thunder_valkyrie', count: 5, priceGold: 1500 },
+        { cardId: 'cyber_ninja', count: 2, priceGold: 3000 }
+      ];
+
+      dailyDeals.forEach(deal => {
+        const card = CARDS[deal.cardId];
+        if (!card) return;
+
+        const item = document.createElement('div');
+        item.className = `shop-daily-card-item rarity-${card.rarity}`;
+        item.innerHTML = `
+          <div class="daily-card-icon">${card.icon}</div>
+          <div class="daily-card-name">${card.name}</div>
+          <div class="daily-card-count">x${deal.count} 張碎片</div>
+          <button class="daily-card-buy-btn" data-card="${deal.cardId}">
+            🪙 ${deal.priceGold} 金幣
+          </button>
+        `;
+
+        item.querySelector('.daily-card-buy-btn')?.addEventListener('click', () => {
+          if (inventory.data.gold < deal.priceGold) {
+            this.showAnnouncement('⚠️ 金幣不足，無法購買碎片！');
+            return;
+          }
+          inventory.addGold(-deal.priceGold);
+          inventory.addCardCount(deal.cardId, deal.count);
+          sounds.playVictory();
+          confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
+          this.showAnnouncement(`✨ 成功購買 ${card.name} 碎片 x${deal.count}！`);
+          this.updateCurrencyUI();
+          this.deckBuilder?.renderAll();
+        });
+
+        dailyGrid.appendChild(item);
+      });
+    }
+
+    // Bind Shop Chest Buttons
+    document.querySelectorAll('.shop-buy-chest-btn').forEach(btn => {
+      btn.onclick = () => {
+        const chestId = btn.dataset.chest;
+        this.gachaManager.startOpening(chestId);
+      };
+    });
+
+    // Daily Free Gems
+    const freeGemsBtn = document.getElementById('btn-claim-free-daily-gems');
+    if (freeGemsBtn) {
+      freeGemsBtn.onclick = () => {
+        const lastClaimKey = 'royal_last_free_gems_date';
+        const today = new Date().toDateString();
+        if (localStorage.getItem(lastClaimKey) === today) {
+          this.showAnnouncement('⚠️ 今日免費寶石已領取，明日再來！');
+          return;
+        }
+        localStorage.setItem(lastClaimKey, today);
+        inventory.addGems(50);
+        sounds.playVictory();
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+        this.showAnnouncement('💎 恭喜領取每日免費 50 寶石！');
+        this.updateCurrencyUI();
+        freeGemsBtn.textContent = '今日已領取';
+        freeGemsBtn.disabled = true;
+      };
+    }
+
+    // Gold Exchange
+    document.querySelectorAll('.supply-buy-btn.buy-gold').forEach(btn => {
+      btn.onclick = () => {
+        const gemsReq = parseInt(btn.dataset.gems, 10);
+        const goldGain = parseInt(btn.dataset.gold, 10);
+
+        if (inventory.data.gems < gemsReq) {
+          this.showAnnouncement('⚠️ 璀璨寶石不足！');
+          return;
+        }
+
+        inventory.addGems(-gemsReq);
+        inventory.addGold(goldGain);
+        sounds.playVictory();
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+        this.showAnnouncement(`🪙 成功兌換 +${goldGain} 金幣！`);
+        this.updateCurrencyUI();
+      };
+    });
+
+    this.shopModal.classList.remove('hidden');
   }
 
   // -------------------------------------------------------------
