@@ -9,6 +9,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host",
+    "start": "vite build && electron .",
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "vite",
