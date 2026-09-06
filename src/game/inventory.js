@@ -89,14 +89,23 @@ export class InventoryManager {
         if (!parsed.cards) parsed.cards = {};
         Object.keys(CARDS).forEach(id => {
           if (!parsed.cards[id]) {
-            parsed.cards[id] = { level: 1, count: 8 };
+            parsed.cards[id] = { level: 1, count: 12 };
+          } else {
+            // 清理歷史溢位或異常天文數字
+            const c = parsed.cards[id];
+            if (!Number.isFinite(c.count) || c.count > 10000 || c.count < 0) {
+              c.count = 20;
+            }
+            if (!Number.isFinite(c.level) || c.level < 1 || c.level > 14) {
+              c.level = Math.max(1, Math.min(14, c.level || 1));
+            }
           }
         });
         if (!parsed.claimedTrophies) parsed.claimedTrophies = [];
         if (!parsed.quests || parsed.quests.length === 0) parsed.quests = JSON.parse(JSON.stringify(DEFAULT_QUESTS));
         if (!parsed.replays) parsed.replays = [];
-        if (!parsed.playerLevel) parsed.playerLevel = 1;
-        if (parsed.playerExp === undefined) parsed.playerExp = 0;
+        if (!parsed.playerLevel || !Number.isFinite(parsed.playerLevel)) parsed.playerLevel = 1;
+        if (parsed.playerExp === undefined || !Number.isFinite(parsed.playerExp)) parsed.playerExp = 0;
         if (!parsed.claimedLevelRewards) parsed.claimedLevelRewards = [];
         if (parsed.hasGoldPass === undefined) parsed.hasGoldPass = false;
         if (!parsed.claimedPassFree) parsed.claimedPassFree = [];
@@ -106,6 +115,10 @@ export class InventoryManager {
         if (!parsed.achievementsProgress) parsed.achievementsProgress = {};
         if (!parsed.claimedAchievements) parsed.claimedAchievements = [];
 
+        // 資源保底防溢位
+        parsed.gold = Math.max(0, Math.min(9999999, Number.isFinite(parsed.gold) ? parsed.gold : 2000));
+        parsed.gems = Math.max(0, Math.min(999999, Number.isFinite(parsed.gems) ? parsed.gems : 300));
+
         return parsed;
       }
     } catch (e) {
@@ -114,7 +127,7 @@ export class InventoryManager {
     return this.getDefaultData();
   }
 
-  // 帳號資料衝突與等級優先同步合併器 (打架時以等級高者優先同步)
+  // 帳號資料衝突與等級優先同步合併器 (以最高等級優先，碎片取最大值，防重複累加暴增)
   resolveConflictWithHighestLevel(dataA, dataB) {
     if (!dataA && !dataB) return this.getDefaultData();
     if (!dataA) return dataB;
@@ -128,16 +141,21 @@ export class InventoryManager {
     const higherBase = scoreA >= scoreB ? JSON.parse(JSON.stringify(dataA)) : JSON.parse(JSON.stringify(dataB));
     const other = scoreA >= scoreB ? dataB : dataA;
 
-    // 1. 卡牌數據融合：保留卡牌最高等級，碎片數量相加
-    if (!higherBase.cards) higherBase.cards = {};
+    // 1. 卡牌數據融合：嚴格保證只保留標準卡牌庫，等級與碎片取最大值 (徹底杜絕未知鍵值與溢位)
+    const sanitizedCards = {};
     Object.keys(CARDS).forEach(cardId => {
-      const c1 = higherBase.cards[cardId] || { level: 1, count: 0 };
+      const c1 = higherBase.cards?.[cardId] || { level: 1, count: 0 };
       const c2 = other.cards?.[cardId] || { level: 1, count: 0 };
-      higherBase.cards[cardId] = {
-        level: Math.max(c1.level || 1, c2.level || 1),
-        count: (c1.count || 0) + (c2.count || 0)
+      
+      const count1 = (typeof c1.count === 'number' && Number.isFinite(c1.count) && c1.count < 10000 && c1.count >= 0) ? Math.floor(c1.count) : 20;
+      const count2 = (typeof c2.count === 'number' && Number.isFinite(c2.count) && c2.count < 10000 && c2.count >= 0) ? Math.floor(c2.count) : 20;
+
+      sanitizedCards[cardId] = {
+        level: Math.max(1, Math.min(14, Math.max(c1.level || 1, c2.level || 1))),
+        count: Math.max(count1, count2)
       };
     });
+    higherBase.cards = sanitizedCards;
 
     // 2. 資源取較高者，絕不降級
     higherBase.gold = Math.max(higherBase.gold || 0, other.gold || 0);

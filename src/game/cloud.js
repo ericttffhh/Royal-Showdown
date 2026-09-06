@@ -1,4 +1,5 @@
-import { Peer } from 'peerjs';
+import PeerPackage from 'peerjs';
+const Peer = PeerPackage.Peer || PeerPackage;
 
 /**
  * 皇室對決 3D - 帳號名稱 / Gmail 跨設備全自動雲端即時同步引擎 (Zero-Friction Auto Cloud Sync)

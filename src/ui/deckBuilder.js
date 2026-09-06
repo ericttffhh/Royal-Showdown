@@ -85,9 +85,9 @@ export class DeckBuilderUI {
       const canUpgrade = inventory.canUpgrade(cardId);
 
       const cardEl = document.createElement('div');
-      cardEl.className = `collection-card-item rarity-${card.rarity} ${inDeck ? 'in-deck' : ''}`;
-
-      const progressPct = upgradeReq ? Math.min(100, (cardData.count / upgradeReq.cardsNeeded) * 100) : 100;
+      const rawCount = (typeof cardData.count === 'number' && Number.isFinite(cardData.count)) ? Math.floor(cardData.count) : 0;
+      const cleanCount = Math.min(9999, Math.max(0, rawCount));
+      const progressPct = upgradeReq ? Math.min(100, (cleanCount / upgradeReq.cardsNeeded) * 100) : 100;
 
       cardEl.innerHTML = `
         <div class="coll-elixir">💧 ${card.cost}</div>
@@ -99,7 +99,7 @@ export class DeckBuilderUI {
         <!-- Shard Progress Bar -->
         <div class="coll-progress-box">
           <div class="coll-progress-fill ${canUpgrade ? 'ready' : ''}" style="width: ${progressPct}%"></div>
-          <span class="coll-progress-text">${upgradeReq ? `${cardData.count}/${upgradeReq.cardsNeeded}` : 'MAX'}</span>
+          <span class="coll-progress-text">${upgradeReq ? `${cleanCount}/${upgradeReq.cardsNeeded}` : 'MAX'}</span>
         </div>
 
         <!-- Upgrade Button if ready -->
