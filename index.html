@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <!-- Content Security Policy for secure public deployment and Google OAuth/Avatars -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob: wss:; img-src 'self' data: blob: https: http:; connect-src 'self' https: wss: data: blob:;">
+  <meta name="theme-color" content="#090d17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>皇室對決 3D (Clash Royale 3D) - 全功能終極版</title>
+  <meta name="description" content="3D皇室戰爭風格雙人即時塔防競技遊戲，支援7X無限聖水、輪選大挑戰、PVE無盡防禦、英雄技能、多視角切換與雙人連線。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+TC:wght@400;600;700;900&family=Teko:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+  <!-- Google Identity Services (GSI) SDK for Real Google Sign-In -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Top Global Currency & User Profile Bar -->
+  <header id="global-currency-bar" class="currency-bar">
+    <div class="curr-item user-profile-box clickable" id="btn-open-profile" title="點擊查看/切換帳號與個人檔案">
+      <span class="user-avatar-icon" id="user-top-avatar">👑</span>
+      <div class="user-header-info">
+        <span class="user-header-name" id="user-top-name">皇家領主</span>
+        <span class="user-header-tag" id="user-top-tag">訪客</span>
+      </div>
+    </div>
+    <!-- 1-100 Player Level & EXP Widget -->
+    <div class="curr-item player-level-box clickable" id="btn-open-player-level" title="點擊查看 1-100 級升等體系與獎勵">
+      <span class="level-badge" id="top-level-badge">Lv.1</span>
+      <div class="level-bar-dock">
+        <div class="level-bar-fill" id="top-level-bar" style="width: 0%;"></div>
+        <span class="level-exp-text" id="top-level-exp">0/105 EXP</span>
+      </div>
+    </div>
+    <div class="curr-item gold-box" id="btn-open-gold-shop" title="皇家金幣">
+      <span class="curr-icon">🪙</span>
+      <span class="curr-val" id="top-gold-val">2000</span>
+    </div>
+    <div class="curr-item gem-box" id="btn-open-gem-shop" title="璀璨寶石">
+      <span class="curr-icon">💎</span>
+      <span class="curr-val" id="top-gems-val">300</span>
+    </div>
+    <div class="curr-item crown-box" title="累積皇冠">
+      <span class="curr-icon">👑</span>
+      <span class="curr-val" id="top-crowns-val">0</span>
+    </div>
+    <div class="curr-item trophy-box clickable" id="btn-open-trophy-road" title="點擊查看天梯獎盃之路">
+      <span class="curr-icon">🏆</span>
+      <span class="curr-val" id="top-trophy-val">1000</span>
+      <span class="trophy-badge-tag">天梯之路</span>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       MAIN LOBBY PANELS
+       ========================================================= -->
+
+  <!-- Main Menu / Battle Lobby -->
+  <div id="menu-overlay" class="modal-backdrop">
+    <div class="menu-card main-hub">
+      <div class="royal-crest">⚔️</div>
+      <h1 class="game-title">皇室對決 <span>3D</span></h1>
+      <p class="game-subtitle">CLASH ROYALE 3D ULTIMATE TACTICS</p>
+
+      <!-- Quick Action Badges (Quests, Royale Pass, 7-Day Rewards, Achievements, Settings, Replays) -->
+      <div class="lobby-quick-tools">
+        <button id="btn-open-pass" class="quick-tool-btn featured-gold">
+          <span>👑 皇室戰令</span>
+          <span class="badge-dot active"></span>
+        </button>
+        <button id="btn-open-7day" class="quick-tool-btn featured-purple">
+          <span>🎁 七日簽到</span>
+          <span class="badge-dot active"></span>
+        </button>
+        <button id="btn-open-quests" class="quick-tool-btn">
+          <span>📜 每日任務</span>
+          <span class="badge-dot" id="quest-alert-dot"></span>
+        </button>
+        <button id="btn-open-achievements" class="quick-tool-btn">
+          <span>🎖️ 榮譽成就</span>
+        </button>
+        <button id="btn-open-settings" class="quick-tool-btn">
+          <span>⚙️ 音量設定</span>
+        </button>
+        <button id="btn-open-replays" class="quick-tool-btn">
+          <span>🎬 對戰記錄</span>
+        </button>
+      </div>
+
+      <!-- Quick Match Highlight Button -->
+      <button id="btn-quick-match" class="quick-match-hero-btn">
+        <div class="hero-radar-pulse"></div>
+        <span class="hero-btn-icon">⚡</span>
+        <div class="hero-btn-text">
+          <span class="hero-btn-title">實時天梯快速匹配</span>
+          <span class="hero-btn-sub">智能秒速配對全球實力相近玩家</span>
+        </div>
+        <span class="hero-btn-arrow">⚔️</span>
+      </button>
+
+      <!-- Main Action Modes Grid -->
+      <div class="menu-modes-grid">
+        <button id="btn-mode-ai" class="royal-btn primary pulse">
+          <span class="btn-icon">🤖</span>
+          <div class="btn-text-group">
+            <span class="btn-title">經典人機 (VS AI)</span>
+            <span class="btn-desc">單人挑戰智慧電腦 · 3 種難度</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-boss" class="royal-btn boss-mode">
+          <span class="btn-icon">🦾</span>
+          <div class="btn-text-group">
+            <span class="btn-title">泰坦首領討伐 (Boss Rush)</span>
+            <span class="btn-desc">迎戰 5000HP 狂暴泰坦魔像 & 地震衝擊</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-7x" class="royal-btn rage-mode">
+          <span class="btn-icon">⚡</span>
+          <div class="btn-text-group">
+            <span class="btn-title">7X 無限狂暴聖水</span>
+            <span class="btn-desc">7倍極速充能 · 滿屏大軍狂轟</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-draft" class="royal-btn draft-mode">
+          <span class="btn-icon">🎲</span>
+          <div class="btn-text-group">
+            <span class="btn-title">輪選選卡大挑戰</span>
+            <span class="btn-desc">4輪 2選1 · 隨機陣容博弈</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-pve" class="royal-btn pve-mode">
+          <span class="btn-icon">🛡️</span>
+          <div class="btn-text-group">
+            <span class="btn-title">PVE 無盡波次防禦</span>
+            <span class="btn-desc">迎戰20波怪獸大軍 & 泰坦Boss</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-online" class="royal-btn secondary">
+          <span class="btn-icon">🌐</span>
+          <div class="btn-text-group">
+            <span class="btn-title">好友自建房 (P2P)</span>
+            <span class="btn-desc">自定義房間代碼 · 好友連線</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-local" class="royal-btn tertiary">
+          <span class="btn-icon">👥</span>
+          <div class="btn-text-group">
+            <span class="btn-title">本地雙人同屏 (1v1)</span>
+            <span class="btn-desc">同台設備雙向輪流部署</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Quick Chest Gacha Bar -->
+      <div class="lobby-chest-dock">
+        <div class="chest-dock-title">🎁 每日皇家寶箱抽卡</div>
+        <div class="lobby-chest-items">
+          <button class="lobby-chest-btn" data-chest="silver">
+            <span class="chest-emoji">📦</span>
+            <span class="chest-name">白銀寶箱</span>
+            <span class="chest-price">100 🪙</span>
+          </button>
+          <button class="lobby-chest-btn featured" data-chest="crown">
+            <span class="chest-emoji">👑</span>
+            <span class="chest-name">皇冠寶箱</span>
+            <span class="chest-price">5 👑</span>
+          </button>
+          <button class="lobby-chest-btn magic" data-chest="magical">
+            <span class="chest-emoji">✨</span>
+            <span class="chest-name">神奇寶箱</span>
+            <span class="chest-price">80 💎</span>
+          </button>
+          <button class="lobby-chest-btn legendary" data-chest="legendary">
+            <span class="chest-emoji">💎</span>
+            <span class="chest-name">傳奇寶箱</span>
+            <span class="chest-price">200 💎</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards & Deck Builder Modal -->
+  <div id="deck-modal" class="modal-backdrop hidden">
+    <div class="dialog-card super-large">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">🎴 皇家出戰牌組 (8 張) & 卡牌收藏</h2>
+        <button id="btn-close-deck" class="action-btn cancel small">返回大廳</button>
+      </div>
+      <p class="panel-tip">點擊上方出戰槽位，再點擊下方收藏卡牌即可自由更換；點擊升級按鈕大幅強化生命與傷害！</p>
+
+      <div class="active-deck-container">
+        <div class="active-deck-title">當前出戰牌組</div>
+        <div class="active-deck-slots" id="active-deck-slots"></div>
+      </div>
+
+      <div class="collection-title">全部卡牌與碎片收藏</div>
+      <div class="collection-grid" id="all-cards-grid"></div>
+    </div>
+  </div>
+
+  <!-- Player Level 1-100 Modal -->
+  <div id="player-level-modal" class="modal-backdrop hidden">
+    <div class="dialog-card large player-level-card">
+      <div class="deck-panel-header">
+        <div class="level-header-title-box">
+          <h2 class="dialog-title">🌟 皇家領主等級體系 (1-100 等之路)</h2>
+          <span class="level-title-tag" id="level-modal-title-tag">🌱 新生領主</span>
+        </div>
+        <button id="btn-close-player-level" class="action-btn cancel small">關閉</button>
+      </div>
+
+      <div class="level-summary-dock">
+        <div class="level-avatar-ring">
+          <span class="level-num-display" id="level-modal-num">Lv.1</span>
+        </div>
+        <div class="level-summary-info">
+          <div class="level-exp-row">
+            <span class="level-cur-exp-text">經驗值進度：<strong id="level-modal-exp-detail">0 / 105</strong> EXP</span>
+            <span class="level-max-hint">最高 100 級</span>
+          </div>
+          <div class="level-modal-bar-box">
+            <div class="level-modal-bar-fill" id="level-modal-bar-fill" style="width: 0%;"></div>
+          </div>
+          <p class="level-exp-tips">💡 透過戰鬥獲勝、升級卡牌、開啟寶箱與每日任務即可累積經驗值解鎖 1-100 級專屬稱號與超級獎勵！</p>
+        </div>
+      </div>
+
+      <div class="level-rewards-list" id="level-rewards-list"></div>
+    </div>
+  </div>
+
+  <!-- Celebratory Level Up Popup Modal -->
+  <div id="level-up-modal" class="modal-backdrop hidden">
+    <div class="dialog-card small level-up-celebrate-card">
+      <div class="level-up-star-burst">🌟</div>
+      <h2 class="level-up-title">領主等級提升！</h2>
+      <div class="level-up-number-badge" id="levelup-number-badge">Lv.2</div>
+      <div class="level-up-new-title" id="levelup-new-title">【精銳戰士】</div>
+      <div class="level-up-reward-box" id="levelup-reward-box">
+        <div class="reward-preview-title">🎁 升等專屬獎勵</div>
+        <div class="reward-preview-val" id="levelup-reward-text">🪙 +140 金幣 · 💎 +5 寶石</div>
+      </div>
+      <button id="btn-confirm-levelup" class="action-btn confirm full-width" style="margin-top: 16px;">立即領取獎勵</button>
+    </div>
+  </div>
+
+  <!-- Trophy Road Modal -->
+  <div id="trophy-modal" class="modal-backdrop hidden">
+    <div class="dialog-card large">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">🏆 皇室天梯獎盃之路 (Trophy Road)</h2>
+        <button id="btn-close-trophy" class="action-btn cancel small">關閉</button>
+      </div>
+      <div class="trophy-road-list" id="trophy-road-list"></div>
+    </div>
+  </div>
+
+  <!-- Royale Pass (皇室戰令) Modal -->
+  <div id="pass-modal" class="modal-backdrop hidden">
+    <div class="dialog-card large pass-card">
+      <div class="deck-panel-header">
+        <div class="pass-header-info">
+          <h2 class="dialog-title">👑 皇室戰令 · 賽季通行證</h2>
+          <span class="pass-crown-badge">當前收穫：<strong id="pass-crowns-num">0</strong> 👑 皇冠</span>
+        </div>
+        <button id="btn-close-pass" class="action-btn cancel small">關閉</button>
+      </div>
+
+      <div class="pass-banner-unlock" id="pass-unlock-banner">
+        <div class="pass-banner-text">
+          <span class="pass-gold-title">✨ 解鎖黃金特權通行證 (Gold Pass)</span>
+          <span class="pass-gold-sub">立即解鎖雙倍豪華獎勵、傳奇金卡箱與限定黃金頭像！</span>
+        </div>
+        <button id="btn-buy-gold-pass" class="pass-unlock-btn">
+          <span>解鎖特權</span>
+          <span class="unlock-cost">300 💎</span>
+        </button>
+      </div>
+
+      <div class="pass-tiers-list" id="pass-tiers-list"></div>
+    </div>
+  </div>
+
+  <!-- 7-Day Daily Login Rewards Modal -->
+  <div id="seven-day-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium seven-day-card">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">🎁 七日登入狂歡豪禮</h2>
+        <button id="btn-close-7day" class="action-btn cancel small">關閉</button>
+      </div>
+      <p class="panel-tip">連續 7 天簽到即可獲得海量金幣、寶石與第 7 天的傳奇超級寶箱！</p>
+      <div class="seven-day-grid" id="seven-day-grid"></div>
+    </div>
+  </div>
+
+  <!-- Achievements Modal -->
+  <div id="achievements-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">🎖️ 皇室榮譽成就殿堂</h2>
+        <button id="btn-close-achievements" class="action-btn cancel small">關閉</button>
+      </div>
+      <div class="achievements-list" id="achievements-list"></div>
+    </div>
+  </div>
+
+  <!-- Settings & Audio Volume Modal -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="dialog-card small settings-card">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">⚙️ 遊戲設定與音量控制</h2>
+        <button id="btn-close-settings" class="action-btn cancel small">關閉</button>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-row">
+          <span class="settings-label">🔊 主音量大小：</span>
+          <input type="range" id="slider-master-volume" min="0" max="100" value="70" class="volume-slider">
+          <span id="master-vol-num" class="volume-num">70%</span>
+        </div>
+
+        <div class="settings-row">
+          <span class="settings-label">🎵 背景音樂 (BGM)：</span>
+          <input type="range" id="slider-bgm-volume" min="0" max="100" value="65" class="volume-slider">
+          <span id="bgm-vol-num" class="volume-num">65%</span>
+        </div>
+
+        <div class="settings-row">
+          <span class="settings-label">📱 手機流暢模式：</span>
+          <button id="btn-toggle-perf-mode" class="toggle-switch-btn active">已啟用 (60 FPS)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Quests Modal -->
+  <div id="quests-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">📜 每日任務與挑戰</h2>
+        <button id="btn-close-quests" class="action-btn cancel small">關閉</button>
+      </div>
+      <div class="quests-list" id="quests-list"></div>
+    </div>
+  </div>
+
+  <!-- Match Replays Modal -->
+  <div id="replays-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">🎬 最近對戰記錄與重播</h2>
+        <button id="btn-close-replays" class="action-btn cancel small">關閉</button>
+      </div>
+      <div class="replays-list" id="replays-list"></div>
+    </div>
+  </div>
+
+  <!-- Draft Mode Picking Modal -->
+  <div id="draft-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium">
+      <h2 class="dialog-title">🎲 輪選選卡 (第 <span id="draft-round-num">1</span> / 4 輪)</h2>
+      <p class="panel-tip">點選一張卡牌歸自己所有，另一張將自動交給對手！</p>
+      <div class="draft-choices" id="draft-choices"></div>
+    </div>
+  </div>
+
+  <!-- Real-time Ranked Matchmaking Modal -->
+  <div id="matchmaking-modal" class="modal-backdrop matchmaking-backdrop hidden">
+    <div class="matchmaking-card">
+      <div class="radar-container">
+        <div class="radar-wave wave1"></div>
+        <div class="radar-wave wave2"></div>
+        <div class="radar-wave wave3"></div>
+        <div class="radar-scanner"></div>
+        <div class="radar-center-icon">👑</div>
+      </div>
+
+      <h2 class="matchmaking-title" id="mm-status-title">正在尋找天梯對手...</h2>
+      <p class="matchmaking-sub" id="mm-status-sub">已搜尋時間：<span id="mm-timer-text">00:00</span></p>
+
+      <div class="mm-player-badge">
+        <span class="mm-badge-icon">🏆</span>
+        <span class="mm-badge-name">當前段位：皇家大師 (1000 🏆)</span>
+      </div>
+
+      <!-- Opponent Found Card (Revealed on match) -->
+      <div id="mm-opponent-reveal" class="mm-opponent-card hidden">
+        <div class="opponent-matched-label">⚡ 對手已就緒！</div>
+        <div class="opponent-avatar-box">
+          <span class="opponent-avatar-icon">👑</span>
+        </div>
+        <div class="opponent-found-name" id="mm-opponent-name">【皇家戰神】亞瑟王 👑</div>
+        <div class="opponent-found-tag" id="mm-opponent-tag">傳奇大師 · 1350 🏆</div>
+        <div class="mm-versus-tag">VS</div>
+      </div>
+
+      <button id="btn-cancel-matchmaking" class="action-btn cancel mm-cancel-btn">取消搜尋</button>
+    </div>
+  </div>
+
+  <!-- User Authentication (Login / Register / Google Sign-In) Modal -->
+  <div id="auth-modal" class="modal-backdrop hidden">
+    <div class="dialog-card auth-card">
+      <div class="auth-crest">👑</div>
+      <h2 class="dialog-title">皇室戰將 · 帳號登入與註冊</h2>
+      <p class="panel-tip">登入你的專屬帳號，雲端同步所有卡牌、金幣、獎盃與戰績！</p>
+
+      <!-- Google Sign-In Primary Action Button -->
+      <button id="btn-google-signin" class="google-signin-btn">
+        <svg class="google-icon-svg" viewBox="0 0 24 24" width="22" height="22">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>使用 Google 帳號一鍵登入</span>
+      </button>
+
+      <!-- Google Client ID Setup Helper Link -->
+      <div class="google-client-cfg-row">
+        <button id="btn-toggle-google-cfg" class="link-small-btn">⚙️ Google OAuth Client ID 設定</button>
+      </div>
+      <div id="google-cfg-box" class="google-cfg-box hidden">
+        <input type="text" id="input-google-client-id" placeholder="貼上 Google Cloud Console OAuth Client ID" spellcheck="false">
+        <button id="btn-save-google-client-id" class="action-btn confirm tiny">儲存 Client ID</button>
+      </div>
+
+      <div class="auth-divider">
+        <span>或者使用遊戲專屬帳號</span>
+      </div>
+
+      <div class="room-tabs auth-tabs">
+        <button class="tab-btn active" id="tab-auth-login">帳號登入</button>
+        <button class="tab-btn" id="tab-auth-signup">創建新帳號</button>
+      </div>
+
+      <!-- Login Panel -->
+      <div class="tab-panel" id="panel-auth-login">
+        <div class="auth-input-group">
+          <label>用戶名稱：</label>
+          <input type="text" id="login-username-input" placeholder="請輸入註冊時的用戶名" autocomplete="username">
+        </div>
+        <div class="auth-input-group">
+          <label>帳號密碼：</label>
+          <input type="password" id="login-password-input" placeholder="請輸入密碼" autocomplete="current-password">
+        </div>
+        <div id="login-error-msg" class="auth-error-msg"></div>
+        <button id="btn-submit-login" class="action-btn confirm full-width">立即登入</button>
+      </div>
+
+      <!-- Sign Up Panel -->
+      <div class="tab-panel hidden" id="panel-auth-signup">
+        <div class="auth-input-group">
+          <label>設定用戶名：</label>
+          <input type="text" id="signup-username-input" placeholder="例如：皇家戰神小明" maxlength="12" autocomplete="username">
+        </div>
+        <div class="auth-input-group">
+          <label>設定密碼 (至少4位)：</label>
+          <input type="password" id="signup-password-input" placeholder="設定密碼" autocomplete="new-password">
+        </div>
+        <div class="avatar-select-section">
+          <label>選擇專屬皇家頭像：</label>
+          <div class="avatar-picker-grid" id="avatar-picker-grid"></div>
+        </div>
+        <div id="signup-error-msg" class="auth-error-msg"></div>
+        <button id="btn-submit-signup" class="action-btn confirm full-width">註冊並登入</button>
+      </div>
+
+      <div class="dialog-buttons" style="margin-top: 14px;">
+        <button id="btn-close-auth" class="action-btn cancel">暫時以訪客遊玩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Profile & Account Center Modal -->
+  <div id="profile-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium profile-card">
+      <div class="deck-panel-header">
+        <h2 class="dialog-title">👤 皇家個人檔案與帳號中心</h2>
+        <button id="btn-close-profile-modal" class="action-btn cancel small">關閉</button>
+      </div>
+
+      <div class="profile-hero-section">
+        <div class="profile-avatar-large" id="profile-avatar-display">👑</div>
+        <div class="profile-main-meta">
+          <div class="profile-username-row">
+            <span class="profile-username-text" id="profile-username-display">皇家領主</span>
+            <button id="btn-edit-username" class="icon-tiny-btn" title="修改用戶名">✏️</button>
+          </div>
+          <div class="profile-id-tag" id="profile-uid-display">ID: royal_guest_8888</div>
+          <div class="profile-auth-status" id="profile-auth-type-badge">🛡️ 本地訪客帳號</div>
+        </div>
+      </div>
+
+      <!-- Google Link Card -->
+      <div class="profile-google-dock" id="profile-google-dock">
+        <div class="google-dock-info">
+          <div class="google-dock-title">🌐 Google 帳號關聯</div>
+          <div class="google-dock-email" id="profile-google-email">尚未綁定 Google 帳號</div>
+        </div>
+        <button id="btn-profile-link-google" class="google-action-small-btn">綁定 Google</button>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="profile-stats-summary">
+        <div class="p-stat-box">
+          <span class="p-stat-val" id="profile-stat-trophies">1000 🏆</span>
+          <span class="p-stat-lbl">天梯獎盃</span>
+        </div>
+        <div class="p-stat-box">
+          <span class="p-stat-val" id="profile-stat-crowns">0 👑</span>
+          <span class="p-stat-lbl">總收穫皇冠</span>
+        </div>
+        <div class="p-stat-box">
+          <span class="p-stat-val" id="profile-stat-wins">0 ⚔️</span>
+          <span class="p-stat-lbl">歷史勝場</span>
+        </div>
+        <div class="p-stat-box">
+          <span class="p-stat-val" id="profile-stat-cards">14 🎴</span>
+          <span class="p-stat-lbl">已解鎖兵團</span>
+        </div>
+      </div>
+
+      <div class="profile-actions-dock">
+        <button id="btn-open-switch-account" class="action-btn confirm full-width">切換 / 登入其他帳號</button>
+        <button id="btn-logout-current" class="action-btn cancel full-width" style="margin-top: 8px;">登出當前帳號</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Tabs -->
+  <nav id="main-nav-bar" class="main-bottom-nav">
+    <button class="nav-tab-btn active" id="nav-btn-battle">
+      <span class="nav-icon">⚔️</span>
+      <span class="nav-label">戰鬥大廳</span>
+    </button>
+    <button class="nav-tab-btn" id="nav-btn-deck">
+      <span class="nav-icon">🎴</span>
+      <span class="nav-label">牌組構築</span>
+    </button>
+    <button class="nav-tab-btn" id="nav-btn-shop">
+      <span class="nav-icon">🎁</span>
+      <span class="nav-label">寶箱抽卡</span>
+    </button>
+    <button class="nav-tab-btn" id="nav-btn-wiki">
+      <span class="nav-icon">📜</span>
+      <span class="nav-label">兵團圖鑑</span>
+    </button>
+  </nav>
+
+  <!-- 3D Chest Gacha Modal -->
+  <div id="gacha-modal" class="modal-backdrop gacha-backdrop hidden">
+    <div class="gacha-viewport">
+      <div id="gacha-3d-stage" class="gacha-3d-stage"></div>
+      <div id="gacha-tap-hint" class="gacha-tap-hint">點擊寶箱開啟！</div>
+      <div id="gacha-card-reveal" class="gacha-card-reveal hidden"></div>
+    </div>
+  </div>
+
+  <!-- Card Detail Modal -->
+  <div id="card-detail-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium">
+      <div id="card-detail-content"></div>
+      <div class="dialog-buttons" style="margin-top: 20px;">
+        <button id="btn-close-detail" class="action-btn confirm">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       IN-GAME BATTLE HUD
+       ========================================================= -->
+  <div id="hud-overlay" class="hidden">
+    <!-- Top Bar -->
+    <header class="battle-top-bar">
+      <!-- Enemy (Red) Profile -->
+      <div class="player-profile enemy">
+        <div class="avatar-box red-team">
+          <span class="avatar-icon">👑</span>
+          <span class="crown-count red" id="enemy-crowns">0</span>
+        </div>
+        <div class="profile-info">
+          <div class="player-name" id="enemy-name">電腦對手 (AI)</div>
+          <div class="trophy-tag" id="enemy-tag">Lv.9 競技場</div>
+        </div>
+      </div>
+
+      <!-- Match Timer & Status -->
+      <div class="timer-container">
+        <div class="timer-box" id="battle-timer">03:00</div>
+        <div class="battle-mode-badge" id="battle-mode-badge">人機對戰</div>
+      </div>
+
+      <!-- Player (Blue) Profile -->
+      <div class="player-profile me">
+        <div class="profile-info text-right">
+          <div class="player-name" id="player-name">皇家領主 (你)</div>
+          <div class="trophy-tag" id="player-tag">Lv.9 競技場</div>
+        </div>
+        <div class="avatar-box blue-team">
+          <span class="avatar-icon">👑</span>
+          <span class="crown-count blue" id="player-crowns">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Side Tools: King Powers & Camera Mode Switcher -->
+    <aside class="battle-side-actions">
+      <!-- Camera Angle Toggle -->
+      <button id="btn-camera-toggle" class="side-action-btn camera-btn" title="切換 3D 視角 (經典/國王/鳥瞰)">
+        <span>🎥</span>
+        <span class="btn-subtext" id="camera-mode-text">經典</span>
+      </button>
+
+      <!-- King Powers Bar -->
+      <div class="king-powers-dock">
+        <button class="king-power-btn" data-power="shield" title="皇家聖盾 (全塔無敵3秒)">
+          <span class="power-icon">🛡️</span>
+          <span class="power-cost">2💧</span>
+          <div class="power-cd-overlay" id="cd-shield"></div>
+        </button>
+        <button class="king-power-btn" data-power="blizzard" title="絕對零度 (全場敵軍凍結)">
+          <span class="power-icon">❄️</span>
+          <span class="power-cost">3💧</span>
+          <div class="power-cd-overlay" id="cd-blizzard"></div>
+        </button>
+        <button class="king-power-btn" data-power="meteor" title="天基流星 (軌道巨彈轟炸)">
+          <span class="power-icon">☄️</span>
+          <span class="power-cost">4💧</span>
+          <div class="power-cd-overlay" id="cd-meteor"></div>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Mid Screen Announcements -->
+    <div id="announcement-banner" class="announcement-banner hidden">
+      <div class="announcement-content" id="announcement-text">2X 雙倍聖水時間！</div>
+    </div>
+
+    <!-- Emote Bubble -->
+    <div id="player-emote-bubble" class="emote-bubble player-bubble hidden"></div>
+    <div id="enemy-emote-bubble" class="emote-bubble enemy-bubble hidden"></div>
+
+    <!-- Battle Controls Bottom Dock -->
+    <footer class="battle-dock">
+      <div class="dock-side-tools">
+        <button id="btn-toggle-emote" class="tool-btn emote-btn" title="發送皇家表情">
+          <span>😂</span>
+        </button>
+        <button id="btn-sound-toggle" class="tool-btn sound-btn" title="聲音開關">
+          <span id="sound-icon">🔊</span>
+        </button>
+      </div>
+
+      <div class="deck-main-container">
+        <div class="elixir-container">
+          <div class="elixir-icon-badge">
+            <span class="elixir-drop">💧</span>
+            <span class="elixir-num" id="elixir-text">5</span>
+          </div>
+          <div class="elixir-track">
+            <div class="elixir-fill" id="elixir-fill" style="width: 50%;"></div>
+            <div class="elixir-dividers">
+              <span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards-hand-wrapper">
+          <div class="next-card-slot">
+            <span class="next-label">下一個</span>
+            <div class="card-item mini" id="next-card-display"></div>
+          </div>
+
+          <div class="cards-hand" id="cards-hand"></div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Emote Selector Menu Popover -->
+    <div id="emote-popover" class="emote-popover hidden">
+      <div class="emote-grid">
+        <button class="emote-btn-item" data-emote="laugh">😂<span>大笑</span></button>
+        <button class="emote-btn-item" data-emote="cry">😭<span>痛哭</span></button>
+        <button class="emote-btn-item" data-emote="angry">😡<span>暴怒</span></button>
+        <button class="emote-btn-item" data-emote="thumbs">👍<span>點讚</span></button>
+        <button class="emote-btn-item" data-emote="fire">🔥<span>絕殺</span></button>
+        <button class="emote-btn-item" data-emote="crown">👑<span>王者</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Difficulty Modal -->
+  <div id="ai-modal" class="modal-backdrop hidden">
+    <div class="dialog-card">
+      <h2 class="dialog-title">選擇電腦 AI 難度</h2>
+      <div class="difficulty-options">
+        <button class="diff-btn" data-diff="easy">
+          <div class="diff-header">
+            <span class="diff-icon">🌱</span>
+            <span class="diff-name">新手法師 (簡單)</span>
+          </div>
+          <p>出兵節奏從容，適合熟悉 3D 戰場與卡牌機制。</p>
+        </button>
+
+        <button class="diff-btn active" data-diff="medium">
+          <div class="diff-header">
+            <span class="diff-icon">⚔️</span>
+            <span class="diff-name">皇家騎士 (普通)</span>
+          </div>
+          <p>懂得組織防守反擊，會利用法術清理群怪。</p>
+        </button>
+
+        <button class="diff-btn" data-diff="hard">
+          <div class="diff-header">
+            <span class="diff-icon">👑</span>
+            <span class="diff-name">傳奇大師 (困難)</span>
+          </div>
+          <p>極其嚴密的聖水管理，精通雙路施壓與克制下牌！</p>
+        </button>
+      </div>
+
+      <div class="dialog-buttons">
+        <button id="btn-cancel-ai" class="action-btn cancel">返回</button>
+        <button id="btn-start-ai" class="action-btn confirm">進入 3D 戰場</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Online Room Modal -->
+  <div id="room-modal" class="modal-backdrop hidden">
+    <div class="dialog-card">
+      <h2 class="dialog-title">雙人即時連線對決</h2>
+      <div class="room-tabs">
+        <button class="tab-btn active" id="tab-create-room">創建房間</button>
+        <button class="tab-btn" id="tab-join-room">加入房間</button>
+      </div>
+
+      <div class="tab-panel" id="panel-create-room">
+        <p class="tab-tip">將房間代碼發送給好友，對方輸入即可開啟 1v1 線上對戰！</p>
+        <div class="room-code-display">
+          <span class="code-label">你的房間代碼：</span>
+          <span class="code-text" id="my-room-code">正在生成...</span>
+          <button id="btn-copy-code" class="copy-btn">複製</button>
+        </div>
+        <div class="waiting-indicator">
+          <div class="spinner"></div>
+          <span id="waiting-status-text">等待對手連入中...</span>
+        </div>
+      </div>
+
+      <div class="tab-panel hidden" id="panel-join-room">
+        <p class="tab-tip">輸入好友創建的房間代碼：</p>
+        <div class="room-input-group">
+          <input type="text" id="join-room-input" placeholder="例如：ROYAL8" maxlength="10" autocomplete="off" spellcheck="false">
+          <button id="btn-confirm-join" class="action-btn confirm">連接房間</button>
+        </div>
+        <div id="join-status-message" class="join-status"></div>
+      </div>
+
+      <div class="dialog-buttons">
+        <button id="btn-close-room" class="action-btn cancel">返回主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Wiki Encyclopedia Modal -->
+  <div id="cards-wiki-modal" class="modal-backdrop hidden">
+    <div class="dialog-card large">
+      <h2 class="dialog-title">📜 皇家卡牌與 3D 兵團圖鑑</h2>
+      <div class="cards-grid" id="cards-wiki-grid"></div>
+      <div class="dialog-buttons">
+        <button id="btn-close-wiki" class="action-btn confirm">返回主頁</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Match Result Modal -->
+  <div id="result-modal" class="modal-backdrop hidden">
+    <div class="result-card" id="result-card">
+      <div class="result-crowns" id="result-crowns-banner">
+        <span class="crown-icon left">👑</span>
+        <span class="crown-icon center active">👑</span>
+        <span class="crown-icon right">👑</span>
+      </div>
+
+      <h2 class="result-title" id="result-title">皇室大捷！</h2>
+      <p class="result-subtitle" id="result-subtitle">完全摧毀了敵方皇家防線！</p>
+
+      <div class="result-score-box">
+        <div class="score-col blue">
+          <div class="score-team">藍方 (你)</div>
+          <div class="score-num" id="final-player-crowns">3</div>
+        </div>
+        <div class="score-vs">VS</div>
+        <div class="score-col red">
+          <div class="score-team">紅方 (對手)</div>
+          <div class="score-num" id="final-enemy-crowns">0</div>
+        </div>
+      </div>
+
+      <div id="battle-reward-drop" class="reward-drop-box">
+        <div class="reward-drop-title">🎉 戰鬥獎勵</div>
+        <div class="reward-drop-items">
+          <span class="drop-item">🪙 +150 金幣</span>
+          <span class="drop-item">🏆 +30 獎盃</span>
+          <span class="drop-item">👑 皇冠進度累積</span>
+        </div>
+      </div>
+
+      <div class="dialog-buttons">
+        <button id="btn-rematch" class="action-btn confirm">再來一局</button>
+        <button id="btn-result-menu" class="action-btn cancel">返回主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts Entry -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

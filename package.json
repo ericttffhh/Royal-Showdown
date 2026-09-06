@@ -1,0 +1,19 @@
+{
+  "name": "clash-royale-3d",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "peerjs": "^1.5.4",
+    "canvas-confetti": "^1.9.4"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
