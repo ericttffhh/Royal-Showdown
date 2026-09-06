@@ -235,6 +235,31 @@ class CloudSyncService {
 
     return false;
   }
+
+  /**
+   * 清空該帳號在雲端伺服器的所有存檔 (重置)
+   */
+  async clearServerData(user) {
+    if (!user) return false;
+    const accountKey = this.getAccountKey(user);
+    const objectId = this.getLocalCloudObjectId(accountKey);
+
+    try {
+      if (objectId) {
+        // 嘗試從伺服器刪除物件
+        await fetch(`${this.apiEndpoint}/${objectId}`, { method: 'DELETE' });
+      }
+    } catch (e) {
+      console.warn('刪除雲端物件失敗:', e);
+    }
+
+    // 重置本地快取鍵值
+    this.setLocalCloudObjectId(accountKey, null);
+    this.lastSavedTimestamp = Date.now();
+    this.lastLoadedTimestamp = Date.now();
+    console.log('🗑️ [CloudSync] 已清空伺服器端帳號存檔紀錄:', accountKey);
+    return true;
+  }
 }
 
 export const cloudSync = new CloudSyncService();

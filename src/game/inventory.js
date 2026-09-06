@@ -628,6 +628,25 @@ export class InventoryManager {
 
     return { success: false, error: '找不到該雲端同步碼對應的存檔，請確認代碼是否正確！' };
   }
+
+  // 重置為全新初始 1 級存檔 (同時清空雲端伺服器與本地存檔)
+  async resetToFactoryDefault() {
+    this.data = this.getDefaultData();
+    try {
+      localStorage.removeItem(this.getStorageKey());
+    } catch (e) {}
+
+    if (auth.currentUser) {
+      auth.currentUser.level = 1;
+      auth.currentUser.exp = 0;
+      auth.saveAccounts();
+      await cloudSync.clearServerData(auth.currentUser);
+    }
+
+    this.saveData(true);
+    this.notifySyncCallbacks();
+    return { success: true };
+  }
 }
 
 export const inventory = new InventoryManager();

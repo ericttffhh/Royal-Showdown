@@ -368,6 +368,17 @@ export class MenuUI {
       this.showAnnouncement('⚡ 已成功將進度設定為 7 級領主！所有卡牌與資源已同步！');
     });
 
+    // 🗑️ 清空伺服器與本地存檔
+    document.getElementById('btn-reset-cloud-data')?.addEventListener('click', async () => {
+      const confirmed = confirm('⚠️ 警告：確定要清空雲端伺服器與本機的所有存檔資料嗎？\n\n這將會重置為全新 1 級初始狀態，所有卡牌與金幣將重設！');
+      if (confirmed) {
+        await inventory.resetToFactoryDefault();
+        this.refreshUserData();
+        this.openProfileModal();
+        this.showAnnouncement('🗑️ 雲端伺服器與本機存檔已完全清空，已重置為 1 級！');
+      }
+    });
+
     document.getElementById('btn-copy-cloud-code')?.addEventListener('click', () => {
       const code = document.getElementById('cloud-sync-code-text')?.textContent;
       if (code) {
