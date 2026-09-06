@@ -386,14 +386,34 @@ export class Arena3D {
   }
 
   setupResizeListener() {
-    window.addEventListener('resize', () => {
+    const updateCam = () => {
       if (!this.camera || !this.renderer) return;
       const width = window.innerWidth;
       const height = window.innerHeight;
-      this.camera.aspect = width / height;
+      const aspect = width / height;
+      this.camera.aspect = aspect;
+
+      if (aspect < 1.0) {
+        // Mobile portrait: adjust FOV and height so both player and enemy towers fit with good margins
+        this.camera.fov = Math.max(48, Math.min(64, 48 / (aspect * 1.15)));
+        if (this.cameraMode === 'classic') {
+          this.targetCameraPos.set(0, 30, 25);
+          this.targetCameraLook.set(0, 0, 0);
+        }
+      } else {
+        this.camera.fov = 45;
+        if (this.cameraMode === 'classic') {
+          this.targetCameraPos.set(0, 26, 22);
+          this.targetCameraLook.set(0, 0, 1.5);
+        }
+      }
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(width, height);
-    });
+    };
+
+    window.addEventListener('resize', updateCam);
+    window.addEventListener('orientationchange', updateCam);
+    updateCam();
   }
 
   render(deltaTime) {
