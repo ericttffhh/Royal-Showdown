@@ -138,14 +138,28 @@ class CloudSyncService {
   }
 
   /**
-   * 由雲端伺服器載入該帳號 (以用戶名 / Gmail 查詢) 的所有存檔資料包
+   * 由雲端伺服器載入該帳號 (以用戶名 / Gmail / 全局存檔槽 查詢) 的所有存檔資料包
    */
   async loadAccountFromServer(user) {
     if (!user) return null;
     const slugs = this.getAccountSlugs(user);
 
+    // 1. 優先透過內部零 CORS /api/cloud 伺服器 API 查詢
     for (const slug of slugs) {
-      // 1. 向雲端資料庫請求該帳號專屬資料包
+      try {
+        const res = await fetch(`/api/cloud?key=${slug}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && (data.playerLevel || data.save?.playerLevel || data.gold !== undefined)) {
+            this.lastLoadedTimestamp = Math.max(this.lastLoadedTimestamp, data.timestamp || 0);
+            return data.save || data;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. 外部備援通道 (cl1p.net) 查詢
+    for (const slug of slugs) {
       try {
         const res = await fetch(`https://api.cl1p.net/${slug}`, { cache: 'no-store' });
         if (res.ok) {
@@ -156,12 +170,21 @@ class CloudSyncService {
             return parsed.save || parsed;
           }
         }
-      } catch (e) {
-        console.warn(`雲端帳號查詢 [${slug}] 異常:`, e);
-      }
+      } catch (e) {}
     }
 
-    // 2. 本地快取保底
+    // 3. 若為訪客帳號或新裝置未登入，嘗試拉取最近全局主存檔
+    try {
+      const res = await fetch('/api/cloud?key=royal_latest_global_save', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.playerLevel >= 2 || data.save?.playerLevel >= 2)) {
+          return data.save || data;
+        }
+      }
+    } catch (e) {}
+
+    // 4. 本地快取保底
     try {
       const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
       for (const slug of slugs) {
@@ -218,27 +241,36 @@ class CloudSyncService {
       localStorage.setItem(this.localCacheRegistryKey, JSON.stringify(cacheMap));
     } catch (e) {}
 
-    // 自動同步至雲端伺服器 (為用戶的所有關聯 slug 寫入存檔)
     this.isSyncing = true;
     let anySuccess = false;
 
-    for (const slug of slugs) {
+    // 1. 內部零 CORS /api/cloud 儲存 (包含用戶 Slugs 與全局最新存檔槽)
+    const targetKeys = [...slugs, 'royal_latest_global_save'];
+    for (const key of targetKeys) {
       try {
-        const res = await fetch(`https://api.cl1p.net/${slug}`, {
+        const res = await fetch(`/api/cloud?key=${key}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: bodyStr
         });
-        if (res.status === 201 || res.ok) {
+        if (res.ok) {
           anySuccess = true;
-          console.log(`☁️ [AutoCloud] 存檔已自動綁定同步至帳號 [${slug}]！等級: ${payload.playerLevel}`);
         }
-      } catch (e) {
-        console.warn(`☁️ [AutoCloud] 雲端同步至 [${slug}] 異常:`, e);
-      }
+      } catch (e) {}
     }
-    this.isSyncing = false;
 
+    // 2. 外部備援通道 (cl1p.net)
+    for (const slug of slugs) {
+      try {
+        fetch(`https://api.cl1p.net/${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyStr
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    this.isSyncing = false;
     return anySuccess;
   }
 
@@ -262,15 +294,21 @@ class CloudSyncService {
     // 同步儲存至帳號
     this.saveAccountToServer(user, saveData);
 
+    // 儲存至 /api/cloud 與 cl1p
     try {
-      const res = await fetch(`https://api.cl1p.net/royal_${pin}`, {
+      await fetch(`/api/cloud?pin=${pin}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: bodyStr
       });
-      if (res.status === 201 || res.ok) {
-        return { success: true, pin: pin, code: pin, level: saveData.playerLevel || 1 };
-      }
+    } catch (e) {}
+
+    try {
+      fetch(`https://api.cl1p.net/royal_${pin}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: bodyStr
+      }).catch(() => {});
     } catch (e) {}
 
     return { success: true, pin: pin, code: pin, level: saveData.playerLevel || 1 };
@@ -283,6 +321,18 @@ class CloudSyncService {
     if (!pin || !pin.trim()) return null;
     const cleanPin = pin.trim();
 
+    // 1. 由 /api/cloud 下載
+    try {
+      const res = await fetch(`/api/cloud?pin=${cleanPin}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.save || data.playerLevel)) {
+          return data.save || data;
+        }
+      }
+    } catch (e) {}
+
+    // 2. 由 cl1p.net 下載
     try {
       const res = await fetch(`https://api.cl1p.net/royal_${cleanPin}`, { cache: 'no-store' });
       if (res.ok) {
@@ -292,9 +342,8 @@ class CloudSyncService {
           return parsed.save || parsed;
         }
       }
-    } catch (e) {
-      console.warn('4位碼下載失敗:', e);
-    }
+    } catch (e) {}
+
     return null;
   }
 
