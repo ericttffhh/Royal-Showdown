@@ -252,20 +252,21 @@ export class MenuUI {
     });
 
     // Login Submit
-    document.getElementById('btn-submit-login')?.addEventListener('click', () => {
+    document.getElementById('btn-submit-login')?.addEventListener('click', async () => {
       const usernameInput = document.getElementById('login-username-input').value;
       const passwordInput = document.getElementById('login-password-input').value;
       const errEl = document.getElementById('login-error-msg');
       const prevUserId = auth.currentUser ? auth.currentUser.id : null;
 
-      const res = auth.signIn(usernameInput, passwordInput);
+      errEl.textContent = '⏳ 正在驗證與同步雲端存檔...';
+      const res = await auth.signIn(usernameInput, passwordInput);
       if (res.success) {
         errEl.textContent = '';
         sounds.playVictory();
         this.authModal.classList.add('hidden');
         this.menuOverlay.classList.remove('hidden');
         this.refreshUserData(prevUserId);
-        this.showAnnouncement(`👑 歡迎領主回來：${res.user.username}！`);
+        this.showAnnouncement(`👑 歡迎領主：${res.user.username} (雲端存檔已同步)！`);
       } else {
         errEl.textContent = res.error;
       }

@@ -1,6 +1,7 @@
 /**
  * 皇室對決 3D - 用戶帳號與 真實 Google OAuth2 認證管理系統
  */
+import { cloudSync } from './cloud.js';
 
 const ACCOUNTS_STORAGE_KEY = 'royal_clash_accounts_v1';
 const CURRENT_USER_KEY = 'royal_clash_current_user_id';
@@ -125,13 +126,40 @@ export class AuthManager {
     return { success: true, user: newUser };
   }
 
-  // 本地帳號登入
-  signIn(username, password) {
+  // 本地/雲端帳號登入 (支援跨設備自動識別與同步)
+  async signIn(username, password) {
     const trimmed = username.trim();
-    const user = this.accounts.find(a => a.username.toLowerCase() === trimmed.toLowerCase());
+    let user = this.accounts.find(a => a.username.toLowerCase() === trimmed.toLowerCase());
+
+    // 若本機尚未記錄該帳號 (例如手機新開)，向雲端伺服器查詢
+    if (!user) {
+      try {
+        const remoteData = await cloudSync.loadAccountFromServer({ username: trimmed });
+        if (remoteData) {
+          const importedUser = {
+            id: 'user_' + Date.now().toString(36),
+            username: trimmed,
+            password: password,
+            email: remoteData.email || '',
+            authType: 'local',
+            avatar: '👑',
+            avatarUrl: null,
+            level: remoteData.level || 1,
+            exp: 0,
+            createdAt: new Date().toLocaleDateString('zh-TW'),
+            googleId: null
+          };
+          this.accounts.push(importedUser);
+          this.saveAccounts();
+          user = importedUser;
+        }
+      } catch (e) {
+        console.warn('雲端帳號查詢異常:', e);
+      }
+    }
 
     if (!user) {
-      return { success: false, error: '找不到該用戶名稱！' };
+      return { success: false, error: '找不到該用戶名稱！請確認名稱與電腦端完全相同' };
     }
 
     if (user.password && user.password !== password) {
@@ -157,8 +185,8 @@ export class AuthManager {
     }
   }
 
-  // 處理真實 Google Profile 認證登入
-  processGoogleProfile(googleProfile) {
+  // 處理真實 Google Profile 認證登入 (跨設備雲端自動同步)
+  async processGoogleProfile(googleProfile) {
     if (!googleProfile) return { success: false, error: '無法讀取 Google 用戶資訊' };
 
     const gName = googleProfile.name || googleProfile.email.split('@')[0] || 'Google 領主';
@@ -166,11 +194,38 @@ export class AuthManager {
     const gId = googleProfile.sub || googleProfile.id || ('google_' + Date.now());
     const gPicture = googleProfile.picture || null;
 
-    // 檢查是否已有該 Google ID 或 Email 綁定的帳號
+    // 檢查本地是否已有該 Google ID 或 Email 綁定的帳號
     let user = this.accounts.find(a => a.googleId === gId || (a.email && a.email.toLowerCase() === gEmail.toLowerCase()));
 
+    // 若本地無紀錄，從雲端伺服器查詢跨設備已存檔的 Google 資料
+    if (!user) {
+      try {
+        const remoteData = await cloudSync.loadAccountFromServer({ email: gEmail, googleId: gId });
+        if (remoteData) {
+          const newUser = {
+            id: 'google_' + gId.substr(0, 10) + '_' + Date.now().toString(36),
+            username: remoteData.username || gName,
+            password: '',
+            email: gEmail,
+            authType: 'google',
+            avatar: '👑',
+            avatarUrl: gPicture,
+            level: remoteData.level || 1,
+            exp: 0,
+            createdAt: new Date().toLocaleDateString('zh-TW'),
+            googleId: gId
+          };
+          this.accounts.push(newUser);
+          this.saveAccounts();
+          this.setCurrentUser(newUser);
+          return { success: true, user: newUser, isNew: false };
+        }
+      } catch (e) {
+        console.warn('Google 雲端帳號拉取異常:', e);
+      }
+    }
+
     if (user) {
-      // 登入已有帳號
       user.googleId = gId;
       user.email = gEmail;
       user.authType = 'google';

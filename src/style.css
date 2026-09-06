@@ -2533,7 +2533,21 @@ body, html {
   .trophy-badge-tag { display: none; }
 
   /* Main Menu Overlay Container - Full Screen Mobile Native Flow */
-  #menu-overlay {
+  #menu-overlay.hidden,
+  .modal-backdrop.hidden,
+  .main-bottom-nav.hidden,
+  #main-nav-bar.hidden,
+  #hud-overlay.hidden,
+  #global-currency-bar.hidden,
+  .hidden {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    z-index: -9999 !important;
+  }
+
+  #menu-overlay:not(.hidden) {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
