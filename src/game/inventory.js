@@ -1,13 +1,18 @@
 import { CARDS, CHESTS, UPGRADE_COSTS, DEFAULT_DECK, DEFAULT_QUESTS, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelReward } from './cards.js';
 import { auth } from './auth.js';
+import { cloudSync } from './cloud.js';
 
 /**
- * 玩家資源、背包、任務、1-100級升等、天梯與對戰重播記錄系統 (支援多帳號獨立儲存與隔離)
+ * 玩家資源、背包、任務、1-100級升等、天梯與對戰重播記錄系統 (支援多帳號獨立儲存與雲端伺服器即時同步)
  */
 
 export class InventoryManager {
   constructor() {
     this.data = this.loadData();
+    // 啟動時自動與伺服器進行非同步雲端校準
+    setTimeout(() => {
+      this.syncWithServer();
+    }, 500);
   }
 
   getStorageKey() {
@@ -138,7 +143,7 @@ export class InventoryManager {
     return higherBase;
   }
 
-  saveData() {
+  saveData(skipCloud = false) {
     try {
       const key = this.getStorageKey();
       localStorage.setItem(key, JSON.stringify(this.data));
@@ -149,9 +154,35 @@ export class InventoryManager {
         auth.currentUser.exp = this.data.playerExp || 0;
         auth.saveAccounts();
       }
+
+      // ☁️ 自動即時備份至遠端伺服器 (防跨設備與瀏覽器資料遺失)
+      if (!skipCloud && auth.currentUser) {
+        cloudSync.scheduleSaveToServer(auth.currentUser, this.data);
+      }
     } catch (e) {
       console.error('儲存失敗:', e);
     }
+  }
+
+  // 自動與雲端伺服器連線同步最高等級存檔
+  async syncWithServer(onComplete = null) {
+    if (!auth.currentUser) return this.data;
+    try {
+      const serverSave = await cloudSync.loadAccountFromServer(auth.currentUser);
+      if (serverSave && (serverSave.playerLevel || serverSave.gold !== undefined)) {
+        // 以等級最高者合併存檔
+        const merged = this.resolveConflictWithHighestLevel(this.data, serverSave);
+        this.data = merged;
+        this.saveData(true); // 已是最新伺服器版本，避免重複觸發
+        console.log('🎉 [CloudSync] 伺服器存檔自動同步完成，當前領主等級：', this.data.playerLevel);
+        if (typeof onComplete === 'function') {
+          onComplete(this.data);
+        }
+      }
+    } catch (e) {
+      console.warn('與伺服器同步存檔異常:', e);
+    }
+    return this.data;
   }
 
   switchUser(previousUserId = null) {
@@ -174,6 +205,8 @@ export class InventoryManager {
       auth.currentUser.level = this.data.playerLevel || 1;
       auth.currentUser.exp = this.data.playerExp || 0;
       auth.saveAccounts();
+      // 切換用戶時立即向伺服器拉取該帳號最新進度
+      this.syncWithServer();
     }
 
     return this.data;

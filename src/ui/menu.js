@@ -1519,6 +1519,15 @@ export class MenuUI {
     if (pNameEl) {
       pNameEl.textContent = `${auth.currentUser?.username || '皇家領主'} (你)`;
     }
+
+    // ☁️ 自動由伺服器雲端拉取該帳號所有存檔 (跨設備無損同步)
+    inventory.syncWithServer((syncedData) => {
+      this.updateCurrencyUI();
+      this.deckBuilder?.renderAll();
+      if (syncedData.playerLevel >= 7) {
+        this.showAnnouncement(`☁️ 已自動由伺服器同步 Level ${syncedData.playerLevel} 帳號存檔！`);
+      }
+    });
   }
 
   showAnnouncement(text) {
