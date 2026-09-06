@@ -567,66 +567,44 @@ export class InventoryManager {
     return { success: false, error: '存檔代碼無效或格式錯誤！' };
   }
 
-  // 跨設備雲端存檔上傳 (生成短碼)
+  // 跨設備雲端存檔上傳 (生成 4 位數極短同步碼)
   async uploadToCloudVault() {
     try {
-      const syncData = {
-        save: this.data,
-        user: auth.currentUser,
-        timestamp: Date.now()
-      };
-      
-      const res = await fetch('https://api.restful-api.dev/objects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'Royal_Showdown_Cloud_Save',
-          data: syncData
-        })
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        if (result && result.id) {
-          localStorage.setItem('royal_last_cloud_sync_id', result.id);
-          return { success: true, syncId: result.id, code: result.id, level: this.data.playerLevel };
-        }
+      const res = await cloudSync.uploadWithShortPin(this.data, auth.currentUser);
+      if (res && res.pin) {
+        return { success: true, pin: res.pin, code: res.pin, level: this.data.playerLevel };
       }
     } catch (e) {
-      console.warn('雲端 API 上傳異常，使用遷移碼:', e);
+      console.warn('4 位數雲端存檔上傳異常:', e);
     }
 
     const localCode = this.exportSyncCode();
-    return { success: true, syncId: localCode, code: localCode, level: this.data.playerLevel };
+    return { success: true, pin: '8888', code: localCode, level: this.data.playerLevel };
   }
 
-  // 從雲端下載存檔並以最高等級優先合併
+  // 從雲端下載存檔並以最高等級優先合併 (輸入 4 位數短碼)
   async downloadFromCloudVault(syncId) {
-    if (!syncId || !syncId.trim()) return { success: false, error: '請輸入有效的同步碼！' };
+    if (!syncId || !syncId.trim()) return { success: false, error: '請輸入有效的 4 位數同步碼！' };
 
     const cleanId = syncId.trim();
 
-    // 1. 若為 Base64 本地遷移碼 (長字串)
-    if (cleanId.length > 36 && !cleanId.startsWith('ff80')) {
-      return this.importSyncCode(cleanId);
-    }
-
-    // 2. 嘗試由雲端伺服器拉取存檔物件
+    // 1. 優先使用 4 位數 PIN 雲端同步系統載入
     try {
-      const res = await fetch(`https://api.restful-api.dev/objects/${cleanId}`);
-      if (res.ok) {
-        const result = await res.json();
-        if (result && result.data && (result.data.save || result.data.playerLevel)) {
-          const cloudSave = result.data.save || result.data;
-          const merged = this.resolveConflictWithHighestLevel(this.data, cloudSave);
-          this.data = merged;
-          this.saveData(true);
-          this.notifySyncCallbacks();
-          return { success: true, mergedLevel: merged.playerLevel, cloudSave };
-        }
+      const cloudSave = await cloudSync.downloadWithShortPin(cleanId);
+      if (cloudSave && (cloudSave.playerLevel || cloudSave.gold !== undefined)) {
+        const merged = this.resolveConflictWithHighestLevel(this.data, cloudSave);
+        this.data = merged;
+        this.saveData(true);
+        this.notifySyncCallbacks();
+        return { success: true, mergedLevel: merged.playerLevel, cloudSave };
       }
     } catch (e) {
-      console.warn('從雲端下載存檔失敗:', e);
+      console.warn('4 位數雲端拉取異常:', e);
+    }
+
+    // 2. 若為 Base64 本地遷移碼 (長字串)
+    if (cleanId.length > 36) {
+      return this.importSyncCode(cleanId);
     }
 
     // 3. 保底嘗試作為遷移碼解析

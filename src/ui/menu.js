@@ -312,32 +312,33 @@ export class MenuUI {
       }
     });
 
-    // ☁️ Cloud Sync & Quick Level 7 Handlers
+    // ☁️ 4 位數極短碼雲端存檔同步 (電腦 ↔ 手機 1 秒連動)
     const uploadBtn = document.getElementById('btn-cloud-upload');
     uploadBtn?.addEventListener('click', async () => {
       uploadBtn.disabled = true;
       uploadBtn.textContent = '⏳ 上傳中...';
       try {
         const uploadRes = await inventory.uploadToCloudVault();
-        const code = uploadRes?.code || uploadRes?.syncId || String(uploadRes);
+        const code = uploadRes?.pin || uploadRes?.code || String(uploadRes);
         const resBox = document.getElementById('cloud-sync-result-box');
         const codeText = document.getElementById('cloud-sync-code-text');
         if (resBox && codeText) {
           codeText.textContent = code;
           resBox.classList.remove('hidden');
         }
-        this.showAnnouncement(`☁️ 上傳成功！同步碼：${code}`);
+        sounds.playFanfare();
+        this.showAnnouncement(`☁️ 4 位數同步碼已生成：【${code}】！在手機輸入即可同步！`);
       } catch (e) {
         this.showAnnouncement('❌ 上傳失敗，請重試');
       } finally {
         uploadBtn.disabled = false;
-        uploadBtn.textContent = '📤 立即上傳至伺服器';
+        uploadBtn.textContent = '📤 上傳存檔 (獲取 4 位同步碼)';
       }
     });
 
     const downloadBtn = document.getElementById('btn-cloud-download');
     downloadBtn?.addEventListener('click', async () => {
-      const code = prompt('請輸入電腦端產生的雲端同步碼：');
+      const code = prompt('請輸入電腦端顯示的 4 位數雲端同步碼 (例如: 8821)：');
       if (!code || !code.trim()) return;
       downloadBtn.disabled = true;
       downloadBtn.textContent = '⏳ 載入中...';
@@ -351,23 +352,14 @@ export class MenuUI {
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           this.showAnnouncement('🎉 雲端存檔同步成功！已恢復最高等級進度！');
         } else {
-          this.showAnnouncement('❌ 找不到該同步碼或代碼格式無效，請確認後重試');
+          this.showAnnouncement('❌ 找不到該 4 位數同步碼，請確認代碼是否輸入正確');
         }
       } catch (e) {
         this.showAnnouncement('❌ 載入失敗，請檢查網路連線');
       } finally {
         downloadBtn.disabled = false;
-        downloadBtn.textContent = '📥 由伺服器載入存檔';
+        downloadBtn.textContent = '📥 輸入 4 位同步碼載入';
       }
-    });
-
-    document.getElementById('btn-quick-sync-lvl7')?.addEventListener('click', () => {
-      inventory.quickSetLevel(7);
-      this.refreshUserData();
-      this.openProfileModal();
-      sounds.playVictory();
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      this.showAnnouncement('⚡ 已成功將進度設定為 7 級領主！所有卡牌與資源已同步！');
     });
 
     // 🗑️ 清空伺服器與本地存檔
