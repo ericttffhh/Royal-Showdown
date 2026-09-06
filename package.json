@@ -1,19 +1,61 @@
 {
   "name": "clash-royale-3d",
+  "productName": "皇室對決3D",
+  "description": "皇室對決 3D - 終極卡牌對戰與原創英雄競技遊戲 (Royal Showdown 3D)",
+  "author": "Eric",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "vite",
+    "dist:win": "vite build && electron-builder --win nsis",
+    "dist:win:portable": "vite build && electron-builder --win portable",
+    "dist:mac": "vite build && electron-builder --mac",
+    "dist:all": "vite build && electron-builder -mw"
+  },
+  "build": {
+    "appId": "com.royalshowdown.game",
+    "productName": "皇室對決3D - Royal Showdown",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "皇室對決 3D"
+    }
   },
   "dependencies": {
-    "three": "^0.170.0",
+    "canvas-confetti": "^1.9.4",
     "peerjs": "^1.5.4",
-    "canvas-confetti": "^1.9.4"
+    "three": "^0.170.0"
   },
   "devDependencies": {
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
     "vite": "^6.0.0"
   }
 }
