@@ -589,7 +589,7 @@ export class InventoryManager {
         const result = await res.json();
         if (result && result.id) {
           localStorage.setItem('royal_last_cloud_sync_id', result.id);
-          return { success: true, syncId: result.id, level: this.data.playerLevel };
+          return { success: true, syncId: result.id, code: result.id, level: this.data.playerLevel };
         }
       }
     } catch (e) {
@@ -597,7 +597,7 @@ export class InventoryManager {
     }
 
     const localCode = this.exportSyncCode();
-    return { success: true, syncId: 'LOCAL', localCode, level: this.data.playerLevel };
+    return { success: true, syncId: localCode, code: localCode, level: this.data.playerLevel };
   }
 
   // 從雲端下載存檔並以最高等級優先合併
@@ -606,19 +606,22 @@ export class InventoryManager {
 
     const cleanId = syncId.trim();
 
-    if (cleanId.length > 30) {
+    // 1. 若為 Base64 本地遷移碼 (長字串)
+    if (cleanId.length > 36 && !cleanId.startsWith('ff80')) {
       return this.importSyncCode(cleanId);
     }
 
+    // 2. 嘗試由雲端伺服器拉取存檔物件
     try {
       const res = await fetch(`https://api.restful-api.dev/objects/${cleanId}`);
       if (res.ok) {
         const result = await res.json();
-        if (result && result.data && result.data.save) {
-          const cloudSave = result.data.save;
+        if (result && result.data && (result.data.save || result.data.playerLevel)) {
+          const cloudSave = result.data.save || result.data;
           const merged = this.resolveConflictWithHighestLevel(this.data, cloudSave);
           this.data = merged;
-          this.saveData();
+          this.saveData(true);
+          this.notifySyncCallbacks();
           return { success: true, mergedLevel: merged.playerLevel, cloudSave };
         }
       }
@@ -626,7 +629,8 @@ export class InventoryManager {
       console.warn('從雲端下載存檔失敗:', e);
     }
 
-    return { success: false, error: '找不到該雲端同步碼對應的存檔，請確認代碼是否正確！' };
+    // 3. 保底嘗試作為遷移碼解析
+    return this.importSyncCode(cleanId);
   }
 
   // 重置為全新初始 1 級存檔 (同時清空雲端伺服器與本地存檔)

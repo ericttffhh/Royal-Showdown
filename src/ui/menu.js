@@ -318,44 +318,46 @@ export class MenuUI {
       uploadBtn.disabled = true;
       uploadBtn.textContent = '⏳ 上傳中...';
       try {
-        const code = await inventory.uploadToCloudVault();
+        const uploadRes = await inventory.uploadToCloudVault();
+        const code = uploadRes?.code || uploadRes?.syncId || String(uploadRes);
         const resBox = document.getElementById('cloud-sync-result-box');
         const codeText = document.getElementById('cloud-sync-code-text');
         if (resBox && codeText) {
           codeText.textContent = code;
           resBox.classList.remove('hidden');
         }
-        this.showAnnouncement(`☁️ 上傳成功！同步碼：${code} (在手機輸入即可同步)`);
+        this.showAnnouncement(`☁️ 上傳成功！同步碼：${code}`);
       } catch (e) {
         this.showAnnouncement('❌ 上傳失敗，請重試');
       } finally {
         uploadBtn.disabled = false;
-        uploadBtn.textContent = '📤 上傳當前存檔';
+        uploadBtn.textContent = '📤 立即上傳至伺服器';
       }
     });
 
     const downloadBtn = document.getElementById('btn-cloud-download');
     downloadBtn?.addEventListener('click', async () => {
-      const code = prompt('請輸入電腦端產生的雲端同步碼 (例如 ROYAL-8821 或 6位代碼)：');
+      const code = prompt('請輸入電腦端產生的雲端同步碼：');
       if (!code || !code.trim()) return;
       downloadBtn.disabled = true;
       downloadBtn.textContent = '⏳ 載入中...';
       try {
-        const success = await inventory.downloadFromCloudVault(code.trim());
-        if (success) {
+        const res = await inventory.downloadFromCloudVault(code.trim());
+        const isSuccess = res === true || res?.success === true;
+        if (isSuccess) {
           this.refreshUserData();
           this.openProfileModal();
           sounds.playVictory();
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           this.showAnnouncement('🎉 雲端存檔同步成功！已恢復最高等級進度！');
         } else {
-          this.showAnnouncement('❌ 找不到該同步碼或同步碼已過期，請確認代碼無誤');
+          this.showAnnouncement('❌ 找不到該同步碼或代碼格式無效，請確認後重試');
         }
       } catch (e) {
         this.showAnnouncement('❌ 載入失敗，請檢查網路連線');
       } finally {
         downloadBtn.disabled = false;
-        downloadBtn.textContent = '📥 輸入同步碼載入';
+        downloadBtn.textContent = '📥 由伺服器載入存檔';
       }
     });
 
