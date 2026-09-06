@@ -865,6 +865,68 @@ export class BattleEngine {
     });
   }
 
+  // 權威強制終結對局 (用於 P2P 連線同步)
+  forceEndMatch(result, scores = null) {
+    if (this.isOver) return;
+    this.isOver = true;
+
+    if (scores) {
+      this.playerCrowns = scores.playerCrowns ?? this.playerCrowns;
+      this.enemyCrowns = scores.enemyCrowns ?? this.enemyCrowns;
+      this.callbacks.onCrownChange?.(this.playerCrowns, this.enemyCrowns);
+    }
+
+    if (result === 'win') sounds.playVictory();
+    else if (result === 'loss') sounds.playDefeat();
+
+    this.callbacks.onGameOver?.(result, {
+      playerCrowns: this.playerCrowns,
+      enemyCrowns: this.enemyCrowns
+    });
+  }
+
+  // 導出當前防禦塔狀態
+  getTowersState() {
+    return this.towers.map(t => ({
+      id: t.id,
+      hp: t.hp,
+      maxHp: t.maxHp,
+      isBlue: t.isBlue,
+      type: t.type
+    }));
+  }
+
+  // 套用權威防禦塔狀態並校正
+  applyTowersState(towersState, isGuest = false) {
+    if (!Array.isArray(towersState)) return;
+
+    towersState.forEach(item => {
+      const targetId = isGuest ? BattleEngine.mapHostTowerIdToGuest(item.id) : item.id;
+      const tower = this.towers.find(t => t.id === targetId);
+      if (tower) {
+        // 若權威端該塔已爆毀，本地尚未爆毀，立即觸發爆塔特效
+        if (item.hp <= 0 && tower.hp > 0) {
+          tower.hp = 0;
+          this.destroyTower(tower, !tower.isBlue);
+        } else {
+          tower.hp = Math.max(0, item.hp);
+        }
+      }
+    });
+  }
+
+  static mapHostTowerIdToGuest(hostId) {
+    const map = {
+      'princess_bl': 'princess_er',
+      'princess_br': 'princess_el',
+      'king_b': 'king_e',
+      'princess_el': 'princess_br',
+      'princess_er': 'princess_bl',
+      'king_e': 'king_b'
+    };
+    return map[hostId] || hostId;
+  }
+
   startBattle() {
     this.isPaused = false;
     this.isOver = false;

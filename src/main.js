@@ -31,6 +31,17 @@ class ClashRoyaleApp {
         sounds.stopBGM();
         this.inBattle = false;
         this.pveManager.stopPvE();
+
+        // 🌐 若為線上對決房主，權威廣播遊戲終結與比分至客端
+        if (this.mode === 'online' && this.network.isHost) {
+          this.network.send({
+            type: 'game_over',
+            winner: result === 'win' ? 'host' : (result === 'loss' ? 'guest' : 'draw'),
+            hostCrowns: scores.playerCrowns,
+            guestCrowns: scores.enemyCrowns
+          });
+        }
+
         this.menuUI?.showGameOver(result, scores);
       }
     });
@@ -269,6 +280,27 @@ class ClashRoyaleApp {
       const invX = -data.x;
       const invZ = -data.z;
       this.battle.deployCard(data.cardId, { x: invX, z: invZ }, false);
+    } else if (data.type === 'sync_state') {
+      // 🌐 客端接收房主權威狀態校正訊框 (消除血量與爆塔不同步)
+      if (!this.network.isHost && this.inBattle) {
+        this.battle.applyTowersState(data.towers, true);
+        this.battle.playerCrowns = data.guestCrowns;
+        this.battle.enemyCrowns = data.hostCrowns;
+        this.updateCrownsUI(this.battle.playerCrowns, this.battle.enemyCrowns);
+        this.battle.matchTime = data.time;
+      }
+    } else if (data.type === 'game_over') {
+      // 🌐 客端接收權威對局終結通知 (同秒同分結束遊戲)
+      if (!this.network.isHost && this.inBattle) {
+        const guestResult = data.winner === 'guest' ? 'win' : (data.winner === 'host' ? 'loss' : 'draw');
+        const scores = {
+          playerCrowns: data.guestCrowns,
+          enemyCrowns: data.hostCrowns
+        };
+        sounds.stopBGM();
+        this.inBattle = false;
+        this.battle.forceEndMatch(guestResult, scores);
+      }
     } else if (data.type === 'emote') {
       this.menuUI.showEmote(data.emote, false);
     } else if (data.type === 'rematch') {
@@ -384,6 +416,23 @@ class ClashRoyaleApp {
       }
 
       this.battle.update(deltaTime);
+
+      // 🌐 線上對戰房主每 100ms 廣播高頻狀態同步校正封包 (10Hz Master Authority Sync)
+      if (this.mode === 'online' && this.network.isHost) {
+        this.lastHostSync = this.lastHostSync || 0;
+        if (currentTime - this.lastHostSync > 100) {
+          this.lastHostSync = currentTime;
+          this.network.send({
+            type: 'sync_state',
+            time: this.battle.matchTime,
+            towers: this.battle.getTowersState(),
+            hostCrowns: this.battle.playerCrowns,
+            guestCrowns: this.battle.enemyCrowns,
+            isOver: this.battle.isOver,
+            isSuddenDeath: this.battle.isSuddenDeath
+          });
+        }
+      }
     }
 
     this.arena.render(deltaTime);
