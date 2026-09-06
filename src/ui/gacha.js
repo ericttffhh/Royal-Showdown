@@ -87,8 +87,14 @@ export class GachaManager {
 
   startOpening(chestId) {
     const result = inventory.openChest(chestId);
-    if (result.error) {
-      alert(result.error);
+    if (!result || result.error) {
+      const msg = result?.error || '寶箱開啟失敗！';
+      if (window.gameMenu?.showAnnouncement) {
+        window.gameMenu.showAnnouncement(`⚠️ ${msg}`);
+      } else {
+        alert(msg);
+      }
+      sounds.playTone(220, 150, 0.2, 'sawtooth');
       return;
     }
 
@@ -100,7 +106,7 @@ export class GachaManager {
         cardId: cr.cardId,
         count: cr.count,
         rarity: cr.rarity,
-        card: CARDS[cr.cardId]
+        card: CARDS[cr.cardId] || { name: '神秘碎片', rarity: 'common', cost: 3, icon: '⚔️', description: '' }
       }))
     ];
 

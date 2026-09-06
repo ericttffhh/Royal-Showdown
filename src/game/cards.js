@@ -541,6 +541,10 @@ export const CHESTS = {
   }
 };
 
+// 兼容 magic / magical 別名
+CHESTS.magic = CHESTS.magical;
+
+
 // 天梯獎盃之路里程碑 (Trophy Road)
 export const TROPHY_ROAD = [
   { trophies: 1000, name: '哥布林叢林', rewardType: 'gold', rewardVal: 500, rewardIcon: '🪙 500 金幣' },

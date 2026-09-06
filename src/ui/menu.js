@@ -32,6 +32,7 @@ export class MenuUI {
     this.renderAvatarPicker();
     this.populateCardsWiki();
     this.updateCurrencyUI();
+    window.gameMenu = this;
   }
 
   initElements() {

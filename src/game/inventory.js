@@ -365,18 +365,18 @@ export class InventoryManager {
   }
 
   openChest(chestId) {
-    const chest = CHESTS[chestId];
-    if (!chest) return null;
+    const chest = CHESTS[chestId] || CHESTS[chestId === 'magic' ? 'magical' : chestId];
+    if (!chest) return { error: '寶箱類型不存在！' };
 
     if (chest.costType === 'gold') {
-      if (this.data.gold < chest.cost) return { error: '金幣不足！' };
+      if (this.data.gold < chest.cost) return { error: `金幣不足 (需要 ${chest.cost} 🪙)！` };
       this.addGold(-chest.cost);
     } else if (chest.costType === 'gems') {
-      if (this.data.gems < chest.cost) return { error: '寶石不足！' };
+      if (this.data.gems < chest.cost) return { error: `寶石不足 (需要 ${chest.cost} 💎)！` };
       this.addGems(-chest.cost);
     } else if (chest.costType === 'crowns') {
-      if (this.data.crowns < chest.cost) return { error: '皇冠不足！請先進行對戰收集皇冠' };
-      this.data.crowns -= chest.cost;
+      if ((this.data.crowns || 0) < chest.cost) return { error: `皇冠不足 (需要 ${chest.cost} 👑)！請先進行對戰收集皇冠` };
+      this.data.crowns = Math.max(0, (this.data.crowns || 0) - chest.cost);
     }
 
     const goldGained = Math.floor(Math.random() * (chest.goldMax - chest.goldMin + 1)) + chest.goldMin;
@@ -385,15 +385,23 @@ export class InventoryManager {
     this.addGold(goldGained);
     if (gemsGained > 0) this.addGems(gemsGained);
 
-    const cardPool = Object.keys(CARDS).filter(id => !['rage', 'freeze', 'goblinhut'].includes(id) || Math.random() > 0.3);
+    if (!this.data.cards) this.data.cards = {};
+    Object.keys(CARDS).forEach(id => {
+      if (!this.data.cards[id]) {
+        this.data.cards[id] = { level: 1, count: 8 };
+      }
+    });
+
+    const cardPool = Object.keys(CARDS);
     const cardRewards = [];
     let remainingCards = chest.cardCount;
 
     if (chest.guaranteedEpic > 0) {
       const epics = cardPool.filter(id => CARDS[id]?.rarity === 'epic');
-      for (let i = 0; i < chest.guaranteedEpic; i++) {
+      for (let i = 0; i < Math.min(chest.guaranteedEpic, remainingCards); i++) {
         const randomCard = epics[Math.floor(Math.random() * epics.length)];
         const count = 1;
+        if (!this.data.cards[randomCard]) this.data.cards[randomCard] = { level: 1, count: 0 };
         this.data.cards[randomCard].count += count;
         cardRewards.push({ cardId: randomCard, count, rarity: 'epic' });
         remainingCards -= count;
@@ -405,6 +413,7 @@ export class InventoryManager {
       for (let i = 0; i < Math.min(chest.guaranteedRare, remainingCards); i++) {
         const randomCard = rares[Math.floor(Math.random() * rares.length)];
         const count = Math.min(remainingCards, Math.floor(Math.random() * 2) + 1);
+        if (!this.data.cards[randomCard]) this.data.cards[randomCard] = { level: 1, count: 0 };
         this.data.cards[randomCard].count += count;
         cardRewards.push({ cardId: randomCard, count, rarity: 'rare' });
         remainingCards -= count;
@@ -414,6 +423,7 @@ export class InventoryManager {
     while (remainingCards > 0) {
       const randomCard = cardPool[Math.floor(Math.random() * cardPool.length)];
       const count = Math.min(remainingCards, Math.floor(Math.random() * 3) + 1);
+      if (!this.data.cards[randomCard]) this.data.cards[randomCard] = { level: 1, count: 0 };
       this.data.cards[randomCard].count += count;
       cardRewards.push({ cardId: randomCard, count, rarity: CARDS[randomCard]?.rarity || 'common' });
       remainingCards -= count;
