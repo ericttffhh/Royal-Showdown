@@ -354,6 +354,7 @@ class ClashRoyaleApp {
   // -------------------------------------------------------------
 
   resetMatch() {
+    this.arena.resetCamera(true);
     this.battle.reset();
     this.deckBarUI.reset();
     this.aiController.initDeck();
@@ -373,6 +374,7 @@ class ClashRoyaleApp {
     this.inBattle = false;
     this.pveManager.stopPvE();
     this.matchmaker.cancelSearching();
+    this.arena.resetCamera(true);
     this.battle.reset();
     this.network.disconnect();
     sounds.startLobbyBGM();

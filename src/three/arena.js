@@ -338,6 +338,8 @@ export class Arena3D {
   setCameraMode(mode) {
     this.cameraMode = mode;
     this.isCinematic = false;
+    this.cinematicTarget = null;
+    this.cinematicTime = 0;
 
     if (mode === 'classic') {
       this.targetCameraPos.set(0, 26, 22);
@@ -348,6 +350,23 @@ export class Arena3D {
     } else if (mode === 'topdown') {
       this.targetCameraPos.set(0, 32, 0.5);
       this.targetCameraLook.set(0, 0, 0);
+    }
+  }
+
+  resetCamera(immediate = false) {
+    this.isCinematic = false;
+    this.cinematicTarget = null;
+    this.cinematicTime = 0;
+    this.shakeIntensity = 0;
+    this.shakeDuration = 0;
+    this.shakeElapsed = 0;
+
+    this.setCameraMode(this.cameraMode || 'classic');
+
+    if (immediate && this.camera) {
+      this.camera.position.copy(this.targetCameraPos);
+      this.currentLookAt.copy(this.targetCameraLook);
+      this.camera.lookAt(this.currentLookAt);
     }
   }
 

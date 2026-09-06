@@ -930,6 +930,8 @@ export class BattleEngine {
   startBattle() {
     this.isPaused = false;
     this.isOver = false;
+    this.timeScale = 1.0;
+    this.arena.resetCamera(true);
   }
 
   reset() {
@@ -944,6 +946,8 @@ export class BattleEngine {
     this.enemyElixir = 5.0;
     this.playerCrowns = 0;
     this.enemyCrowns = 0;
+
+    this.arena.resetCamera(true);
 
     Object.keys(this.kingPowerCooldowns).forEach(k => this.kingPowerCooldowns[k] = 0);
     this.towerShieldTimer = { blue: 0, red: 0 };
