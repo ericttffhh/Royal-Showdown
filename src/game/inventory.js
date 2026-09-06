@@ -459,6 +459,119 @@ export class InventoryManager {
     this.saveData();
     return { success: true, reward };
   }
+
+  // 快速設置/同步等級 (含卡牌與金幣補償)
+  quickSetLevel(targetLevel = 7) {
+    const lvl = Math.max(1, Math.min(MAX_PLAYER_LEVEL, targetLevel));
+    this.data.playerLevel = lvl;
+    this.data.playerExp = 0;
+    this.data.gold = Math.max(this.data.gold, 5000 + lvl * 1000);
+    this.data.gems = Math.max(this.data.gems, 300 + lvl * 50);
+    this.data.trophies = Math.max(this.data.trophies, 1000 + lvl * 100);
+
+    // 升級卡牌庫至適當等級
+    Object.keys(this.data.cards).forEach(cardId => {
+      const card = this.data.cards[cardId];
+      if (card) {
+        card.level = Math.max(card.level || 1, Math.min(lvl, card.level + 2));
+        card.count = Math.max(card.count || 0, 50);
+      }
+    });
+
+    this.saveData();
+    return { success: true, level: this.data.playerLevel };
+  }
+
+  // 導出當前設備存檔遷移碼 (Base64 加密字串)
+  exportSyncCode() {
+    try {
+      const dataStr = JSON.stringify(this.data);
+      const encoded = btoa(encodeURIComponent(dataStr));
+      return encoded;
+    } catch (e) {
+      console.error('導出存檔失敗:', e);
+      return null;
+    }
+  }
+
+  // 從遷移碼導入存檔 (以最高等級優先合併)
+  importSyncCode(codeStr) {
+    try {
+      const decodedStr = decodeURIComponent(atob(codeStr.trim()));
+      const importedData = JSON.parse(decodedStr);
+      if (importedData && (importedData.playerLevel || importedData.gold !== undefined)) {
+        const merged = this.resolveConflictWithHighestLevel(this.data, importedData);
+        this.data = merged;
+        this.saveData();
+        return { success: true, mergedLevel: merged.playerLevel };
+      }
+    } catch (e) {
+      console.error('導入存檔失敗:', e);
+    }
+    return { success: false, error: '存檔代碼無效或格式錯誤！' };
+  }
+
+  // 跨設備雲端存檔上傳 (生成短碼)
+  async uploadToCloudVault() {
+    try {
+      const syncData = {
+        save: this.data,
+        user: auth.currentUser,
+        timestamp: Date.now()
+      };
+      
+      const res = await fetch('https://api.restful-api.dev/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Royal_Showdown_Cloud_Save',
+          data: syncData
+        })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        if (result && result.id) {
+          localStorage.setItem('royal_last_cloud_sync_id', result.id);
+          return { success: true, syncId: result.id, level: this.data.playerLevel };
+        }
+      }
+    } catch (e) {
+      console.warn('雲端 API 上傳異常，使用遷移碼:', e);
+    }
+
+    const localCode = this.exportSyncCode();
+    return { success: true, syncId: 'LOCAL', localCode, level: this.data.playerLevel };
+  }
+
+  // 從雲端下載存檔並以最高等級優先合併
+  async downloadFromCloudVault(syncId) {
+    if (!syncId || !syncId.trim()) return { success: false, error: '請輸入有效的同步碼！' };
+
+    const cleanId = syncId.trim();
+
+    if (cleanId.length > 30) {
+      return this.importSyncCode(cleanId);
+    }
+
+    try {
+      const res = await fetch(`https://api.restful-api.dev/objects/${cleanId}`);
+      if (res.ok) {
+        const result = await res.json();
+        if (result && result.data && result.data.save) {
+          const cloudSave = result.data.save;
+          const merged = this.resolveConflictWithHighestLevel(this.data, cloudSave);
+          this.data = merged;
+          this.saveData();
+          return { success: true, mergedLevel: merged.playerLevel, cloudSave };
+        }
+      }
+    } catch (e) {
+      console.warn('從雲端下載存檔失敗:', e);
+    }
+
+    return { success: false, error: '找不到該雲端同步碼對應的存檔，請確認代碼是否正確！' };
+  }
 }
 
 export const inventory = new InventoryManager();

@@ -305,6 +305,77 @@ export class MenuUI {
       }
     });
 
+    // ☁️ Cloud Sync & Quick Level 7 Handlers
+    const uploadBtn = document.getElementById('btn-cloud-upload');
+    uploadBtn?.addEventListener('click', async () => {
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = '⏳ 上傳中...';
+      try {
+        const code = await inventory.uploadToCloudVault();
+        const resBox = document.getElementById('cloud-sync-result-box');
+        const codeText = document.getElementById('cloud-sync-code-text');
+        if (resBox && codeText) {
+          codeText.textContent = code;
+          resBox.classList.remove('hidden');
+        }
+        this.showAnnouncement(`☁️ 上傳成功！同步碼：${code} (在手機輸入即可同步)`);
+      } catch (e) {
+        this.showAnnouncement('❌ 上傳失敗，請重試');
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = '📤 上傳當前存檔';
+      }
+    });
+
+    const downloadBtn = document.getElementById('btn-cloud-download');
+    downloadBtn?.addEventListener('click', async () => {
+      const code = prompt('請輸入電腦端產生的雲端同步碼 (例如 ROYAL-8821 或 6位代碼)：');
+      if (!code || !code.trim()) return;
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '⏳ 載入中...';
+      try {
+        const success = await inventory.downloadFromCloudVault(code.trim());
+        if (success) {
+          this.refreshUserData();
+          this.openProfileModal();
+          sounds.playVictory();
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          this.showAnnouncement('🎉 雲端存檔同步成功！已恢復最高等級進度！');
+        } else {
+          this.showAnnouncement('❌ 找不到該同步碼或同步碼已過期，請確認代碼無誤');
+        }
+      } catch (e) {
+        this.showAnnouncement('❌ 載入失敗，請檢查網路連線');
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📥 輸入同步碼載入';
+      }
+    });
+
+    document.getElementById('btn-quick-sync-lvl7')?.addEventListener('click', () => {
+      inventory.quickSetLevel(7);
+      this.refreshUserData();
+      this.openProfileModal();
+      sounds.playVictory();
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      this.showAnnouncement('⚡ 已成功將進度設定為 7 級領主！所有卡牌與資源已同步！');
+    });
+
+    document.getElementById('btn-copy-cloud-code')?.addEventListener('click', () => {
+      const code = document.getElementById('cloud-sync-code-text')?.textContent;
+      if (code) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(() => {
+            this.showAnnouncement('📋 同步碼已複製到剪貼簿！');
+          }).catch(() => {
+            prompt('請手動複製同步碼：', code);
+          });
+        } else {
+          prompt('請手動複製同步碼：', code);
+        }
+      }
+    });
+
     // Top Trophy Road Opener
     document.getElementById('btn-open-trophy-road')?.addEventListener('click', () => {
       this.openTrophyRoad();

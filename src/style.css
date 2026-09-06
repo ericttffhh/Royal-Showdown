@@ -2382,6 +2382,89 @@ body, html {
   margin-top: 10px;
 }
 
+/* Cloud Sync Dock */
+.profile-cloud-dock {
+  background: linear-gradient(135deg, rgba(30, 96, 255, 0.12) 0%, rgba(193, 55, 255, 0.1) 100%);
+  border: 1.5px solid rgba(255, 215, 0, 0.3);
+  border-radius: 14px;
+  padding: 12px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cloud-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cloud-dock-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--royal-gold);
+  letter-spacing: 0.5px;
+}
+
+.cloud-dock-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.cloud-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cloud-actions-row button {
+  flex: 1;
+  min-width: 90px;
+  font-size: 11px;
+  padding: 8px 6px;
+}
+
+.cloud-sync-result-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(255, 215, 0, 0.5);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.cloud-code-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cloud-code-display {
+  font-family: var(--font-number);
+  font-size: 20px;
+  font-weight: 900;
+  color: #00ffc4;
+  letter-spacing: 1.5px;
+}
+
+.copy-small-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copy-small-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* =========================================================
    COMPREHENSIVE MOBILE RESPONSIVE UI (@media rules)
    ========================================================= */
@@ -3507,5 +3590,73 @@ body, html {
   .shop-supplies-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+  }
+}
+
+/* =========================================================
+   IPHONE PRO / IOS SAFARI & PWA STANDALONE OPTIMIZATIONS
+   ========================================================= */
+
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    min-height: -webkit-fill-available;
+    height: -webkit-fill-available;
+    height: 100dvh;
+    background-color: #090d17;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #canvas-container {
+    height: 100%;
+    min-height: -webkit-fill-available;
+  }
+}
+
+@media all and (display-mode: standalone) {
+  html, body {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100% !important;
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    background: #090d17 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  #canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    height: -webkit-fill-available;
+  }
+
+  /* Ensure bottom nav bar and hud stay cleanly above the home indicator bar */
+  .main-nav-bar {
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .hud-bottom-bar {
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Currency bar respects iPhone Dynamic Island */
+  .currency-bar {
+    top: calc(8px + env(safe-area-inset-top)) !important;
+  }
+
+  /* Modals respect top & bottom safe areas */
+  .dialog-card, .result-card, .pass-card, .seven-day-card, .profile-card, .quests-card, .achievements-card, .settings-card, .replays-card {
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px) !important;
+    margin-top: env(safe-area-inset-top);
   }
 }

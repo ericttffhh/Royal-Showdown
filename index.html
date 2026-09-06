@@ -627,6 +627,26 @@
         </div>
       </div>
 
+      <!-- Cloud Sync & Backup Section (PC <-> Mobile) -->
+      <div class="profile-cloud-dock">
+        <div class="cloud-dock-header">
+          <span class="cloud-dock-title">☁️ 跨設備雲端存檔同步 (電腦 ↔ 手機)</span>
+        </div>
+        <p class="cloud-dock-tip">在電腦上點擊「上傳存檔」獲取同步碼，在手機輸入即可一鍵將 7 級資料無損同步！</p>
+        
+        <div class="cloud-actions-row">
+          <button id="btn-cloud-upload" class="action-btn confirm small">📤 上傳當前存檔</button>
+          <button id="btn-cloud-download" class="action-btn secondary small">📥 輸入同步碼載入</button>
+          <button id="btn-quick-sync-lvl7" class="action-btn gold small" title="一鍵將此設備升級為 7 級領主">⚡ 設為 7 級</button>
+        </div>
+
+        <div id="cloud-sync-result-box" class="cloud-sync-result-box hidden">
+          <div class="cloud-code-label">你的雲端同步碼：</div>
+          <div class="cloud-code-display" id="cloud-sync-code-text">ROYAL-8821</div>
+          <button id="btn-copy-cloud-code" class="copy-small-btn">複製代碼</button>
+        </div>
+      </div>
+
       <div class="profile-actions-dock">
         <button id="btn-open-switch-account" class="action-btn confirm full-width">切換 / 登入其他帳號</button>
         <button id="btn-logout-current" class="action-btn cancel full-width" style="margin-top: 8px;">登出當前帳號</button>
