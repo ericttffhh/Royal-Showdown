@@ -1050,7 +1050,13 @@ export class MenuUI {
   grantReward(reward) {
     if (reward.type === 'gold') inventory.addGold(reward.val);
     if (reward.type === 'gems') inventory.addGems(reward.val);
-    if (reward.type === 'chest') inventory.openChest(reward.val);
+    if (reward.type === 'chest') {
+      if (this.gachaManager) {
+        this.gachaManager.startOpening(reward.val, true);
+      } else {
+        inventory.openChest(reward.val, true);
+      }
+    }
   }
 
   // -------------------------------------------------------------
@@ -1063,36 +1069,54 @@ export class MenuUI {
     grid.innerHTML = '';
 
     const claimed = inventory.data.claimedDailyRewards || [];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const hasClaimedToday = inventory.data.lastDailyClaimDate === todayStr;
 
     SEVEN_DAY_REWARDS.forEach((item, index) => {
       const isClaimed = claimed.includes(item.day);
-      const isAvailable = !isClaimed && (index === 0 || claimed.includes(item.day - 1));
+      const isNextToClaim = !isClaimed && (index === 0 || claimed.includes(item.day - 1));
+      const canClaimNow = isNextToClaim && !hasClaimedToday;
 
       const card = document.createElement('div');
-      card.className = `seven-day-item day-${item.day} ${isClaimed ? 'claimed' : (isAvailable ? 'available' : 'locked')}`;
+      card.className = `seven-day-item day-${item.day} ${isClaimed ? 'claimed' : (canClaimNow ? 'available' : 'locked')}`;
+      
+      let actionHtml = '';
+      if (isClaimed) {
+        actionHtml = '<span class="seven-status-btn claimed">✅ 已簽到</span>';
+      } else if (canClaimNow) {
+        actionHtml = `<button class="seven-claim-btn" data-day="${item.day}">✨ 立即簽到</button>`;
+      } else if (isNextToClaim && hasClaimedToday) {
+        actionHtml = '<span class="seven-status-btn locked">⏳ 明日 00:00 解鎖</span>';
+      } else {
+        actionHtml = '<span class="seven-status-btn locked">🔒 尚未解鎖</span>';
+      }
+
       card.innerHTML = `
         <div class="seven-day-header">第 ${item.day} 天</div>
         <div class="seven-day-title">${item.title}</div>
         <div class="seven-day-reward-icon">${item.icon}</div>
-        <div class="seven-day-action">
-          ${isClaimed
-            ? '<span class="seven-status-btn claimed">已簽到</span>'
-            : (isAvailable
-                ? `<button class="seven-claim-btn" data-day="${item.day}">立即簽到</button>`
-                : '<span class="seven-status-btn locked">明日解鎖</span>')}
-        </div>
+        <div class="seven-day-action">${actionHtml}</div>
       `;
 
       card.querySelector('.seven-claim-btn')?.addEventListener('click', () => {
-        inventory.claimDailyLoginReward(item.day);
+        const success = inventory.claimDailyLoginReward(item.day);
+        if (!success) return;
+
         if (item.rewardType === 'gold') inventory.addGold(item.val);
         if (item.rewardType === 'gems') inventory.addGems(item.val);
-        if (item.rewardType === 'chest') inventory.openChest(item.val);
 
         sounds.playVictory();
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         this.updateCurrencyUI();
         this.openSevenDayModal();
+
+        if (item.rewardType === 'chest') {
+          if (this.gachaManager) {
+            this.gachaManager.startOpening(item.val, true);
+          } else {
+            inventory.openChest(item.val, true);
+          }
+        }
       });
 
       grid.appendChild(card);

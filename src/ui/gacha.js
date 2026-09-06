@@ -85,8 +85,8 @@ export class GachaManager {
     });
   }
 
-  startOpening(chestId) {
-    const result = inventory.openChest(chestId);
+  startOpening(chestId, isFree = false) {
+    const result = inventory.openChest(chestId, isFree);
     if (!result || result.error) {
       const msg = result?.error || '寶箱開啟失敗！';
       if (window.gameMenu?.showAnnouncement) {
