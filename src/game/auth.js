@@ -6,7 +6,7 @@ const ACCOUNTS_STORAGE_KEY = 'royal_clash_accounts_v1';
 const CURRENT_USER_KEY = 'royal_clash_current_user_id';
 const GOOGLE_CLIENT_ID_KEY = 'royal_clash_google_client_id';
 
-// 預設或自訂的 Google OAuth2 Client ID (支援 Google Cloud Console 憑證)
+// 預設或自訂的 Google OAuth2 Client ID (支援 Google Cloud Console 憑證與 Vite 環境變數)
 const DEFAULT_GOOGLE_CLIENT_ID = '1035987154868-google-client-id-sample.apps.googleusercontent.com';
 
 export const AVATAR_OPTIONS = [
@@ -24,7 +24,8 @@ export class AuthManager {
   constructor() {
     this.accounts = this.loadAccounts();
     this.currentUser = this.loadCurrentUser();
-    this.googleClientId = localStorage.getItem(GOOGLE_CLIENT_ID_KEY) || DEFAULT_GOOGLE_CLIENT_ID;
+    const envClientId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLIENT_ID) || '';
+    this.googleClientId = localStorage.getItem(GOOGLE_CLIENT_ID_KEY) || envClientId || DEFAULT_GOOGLE_CLIENT_ID;
   }
 
   loadAccounts() {
