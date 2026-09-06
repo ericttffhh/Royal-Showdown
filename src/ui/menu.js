@@ -91,6 +91,12 @@ export class MenuUI {
       this.updateCurrencyUI();
       this.callbacks.onDeckChanged?.();
     });
+
+    // 實時雲端同步推播即時刷新 UI
+    inventory.onSync(() => {
+      this.updateCurrencyUI();
+      this.deckBuilder?.renderAll();
+    });
   }
 
   updateCurrencyUI() {

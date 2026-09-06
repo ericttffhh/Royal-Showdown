@@ -9,10 +9,33 @@ import { cloudSync } from './cloud.js';
 export class InventoryManager {
   constructor() {
     this.data = this.loadData();
+    this.syncCallbacks = [];
+
+    // 綁定雲端即時心跳提供者與遠端推播監聽
+    cloudSync.setAccountProvider(() => auth.currentUser);
+    cloudSync.onRemoteUpdate((remoteSave) => {
+      if (remoteSave && (remoteSave.playerLevel || remoteSave.gold !== undefined)) {
+        const merged = this.resolveConflictWithHighestLevel(this.data, remoteSave);
+        this.data = merged;
+        this.saveData(true);
+        this.notifySyncCallbacks();
+      }
+    });
+
     // 啟動時自動與伺服器進行非同步雲端校準
     setTimeout(() => {
       this.syncWithServer();
-    }, 500);
+    }, 200);
+  }
+
+  onSync(cb) {
+    if (typeof cb === 'function') this.syncCallbacks.push(cb);
+  }
+
+  notifySyncCallbacks() {
+    this.syncCallbacks.forEach(cb => {
+      try { cb(this.data); } catch(e) {}
+    });
   }
 
   getStorageKey() {
