@@ -9,6 +9,9 @@
   <meta name="theme-color" content="#090d17">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/cover.jpg">
   <title>皇室對決 3D (Clash Royale 3D) - 全功能終極版</title>
   <meta name="description" content="3D皇室戰爭風格雙人即時塔防競技遊戲，支援7X無限聖水、輪選大挑戰、PVE無盡防禦、英雄技能、多視角切換與雙人連線。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -92,6 +95,10 @@
         <button id="btn-open-replays" class="quick-tool-btn">
           <span>🎬 對戰記錄</span>
         </button>
+        <button id="btn-open-multi-test" class="quick-tool-btn featured-cyan pulse-glow" title="8帳號全功能實況測試中心">
+          <span>🧪 8帳號實況測試</span>
+          <span class="badge-dot active"></span>
+        </button>
       </div>
 
       <!-- Quick Match Highlight Button -->
@@ -107,6 +114,22 @@
 
       <!-- Main Action Modes Grid -->
       <div class="menu-modes-grid">
+        <button id="btn-mode-brawl" class="royal-btn brawl-mode pulse-gold">
+          <span class="btn-icon">💥</span>
+          <div class="btn-text-group">
+            <span class="btn-title">四人混戰大亂鬥 (4-Way Brawl)</span>
+            <span class="btn-desc">好友房間/自選邊站 · 不足智慧補AI · 四方爭霸</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-2v2" class="royal-btn coop-mode">
+          <span class="btn-icon">🛡️</span>
+          <div class="btn-text-group">
+            <span class="btn-title">雙人合作防守 (2v2 Coop)</span>
+            <span class="btn-desc">與皇家守護 AI 盟友並肩作戰 · 守護雙城堡</span>
+          </div>
+        </button>
+
         <button id="btn-mode-ai" class="royal-btn primary pulse">
           <span class="btn-icon">🤖</span>
           <div class="btn-text-group">
@@ -701,8 +724,8 @@
        IN-GAME BATTLE HUD
        ========================================================= -->
   <div id="hud-overlay" class="hidden">
-    <!-- Top Bar -->
-    <header class="battle-top-bar">
+    <!-- Classic & 2v2 Top Bar -->
+    <header class="battle-top-bar" id="classic-top-bar">
       <!-- Enemy (Red) Profile -->
       <div class="player-profile enemy">
         <div class="avatar-box red-team">
@@ -730,6 +753,41 @@
         <div class="avatar-box blue-team">
           <span class="avatar-icon">👑</span>
           <span class="crown-count blue" id="player-crowns">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 4-Player Brawl Dedicated Status Bar (Mutually Exclusive) -->
+    <header id="brawl-top-bar" class="brawl-status-bar hidden">
+      <div class="brawl-hud-group left">
+        <div class="brawl-bar-item blue" id="brawl-hud-blue">
+          <span class="team-dot blue"></span>
+          <span class="team-label" id="brawl-label-blue">藍(南)</span>
+          <span class="team-crowns" id="brawl-crowns-blue">1🏰</span>
+        </div>
+        <div class="brawl-bar-item red" id="brawl-hud-red">
+          <span class="team-dot red"></span>
+          <span class="team-label" id="brawl-label-red">紅(北)</span>
+          <span class="team-crowns" id="brawl-crowns-red">1🏰</span>
+        </div>
+      </div>
+
+      <!-- Central Match Info for Brawl -->
+      <div class="brawl-timer-container">
+        <div class="timer-box brawl-timer" id="brawl-battle-timer">03:00</div>
+        <div class="battle-mode-badge brawl-badge">💥 四人大亂鬥</div>
+      </div>
+
+      <div class="brawl-hud-group right">
+        <div class="brawl-bar-item green" id="brawl-hud-green">
+          <span class="team-dot green"></span>
+          <span class="team-label" id="brawl-label-green">綠(西)</span>
+          <span class="team-crowns" id="brawl-crowns-green">1🏰</span>
+        </div>
+        <div class="brawl-bar-item purple" id="brawl-hud-purple">
+          <span class="team-dot purple"></span>
+          <span class="team-label" id="brawl-label-purple">紫(東)</span>
+          <span class="team-crowns" id="brawl-crowns-purple">1🏰</span>
         </div>
       </div>
     </header>
@@ -762,9 +820,12 @@
       </div>
     </aside>
 
-    <!-- Mid Screen Announcements -->
+    <!-- Mid Screen Announcements & Hazard Alerts -->
     <div id="announcement-banner" class="announcement-banner hidden">
       <div class="announcement-content" id="announcement-text">2X 雙倍聖水時間！</div>
+    </div>
+    <div id="hazard-banner" class="hazard-banner hidden">
+      <div class="hazard-content" id="hazard-text">❄️ 極地暴風雪來襲！全軍減速 25%！</div>
     </div>
 
     <!-- Emote Bubble -->
@@ -817,6 +878,87 @@
         <button class="emote-btn-item" data-emote="thumbs">👍<span>點讚</span></button>
         <button class="emote-btn-item" data-emote="fire">🔥<span>絕殺</span></button>
         <button class="emote-btn-item" data-emote="crown">👑<span>王者</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4-Player Brawl Room & Seat Selection Modal -->
+  <div id="brawl-room-modal" class="modal-backdrop hidden">
+    <div class="dialog-card super-large brawl-room-card">
+      <div class="brawl-room-header">
+        <h2 class="dialog-title">💥 四人混戰大亂鬥 - 戰局大廳</h2>
+        <span class="brawl-sub">4 國割據，勝者登基！點擊任意坐席切換出陣陣營，空席由智慧電腦補齊。</span>
+      </div>
+
+      <div class="brawl-seats-grid">
+        <!-- Blue Seat -->
+        <div id="brawl-seat-blue" class="brawl-seat-box blue active" data-side="blue">
+          <div class="seat-badge blue">🟦 南方陣營</div>
+          <div class="seat-avatar" id="seat-avatar-blue">👑</div>
+          <div class="seat-name" id="seat-name-blue">皇家領主 (你)</div>
+          <div class="seat-status" id="seat-status-blue">玩家已就緒</div>
+          <button class="seat-claim-btn seat-select-btn active" data-side="blue">你的陣營席位</button>
+        </div>
+
+        <!-- Red Seat -->
+        <div id="brawl-seat-red" class="brawl-seat-box red" data-side="red">
+          <div class="seat-badge red">🟥 北方陣營</div>
+          <div class="seat-avatar" id="seat-avatar-red">🤖</div>
+          <div class="seat-name" id="seat-name-red">狂暴烈焰 AI</div>
+          <div class="seat-status" id="seat-status-red">電腦補位 (大師)</div>
+          <button class="seat-claim-btn seat-select-btn" data-side="red">選邊站此處</button>
+        </div>
+
+        <!-- Green Seat -->
+        <div id="brawl-seat-green" class="brawl-seat-box green" data-side="green">
+          <div class="seat-badge green">🟩 西方陣營</div>
+          <div class="seat-avatar" id="seat-avatar-green">🤖</div>
+          <div class="seat-name" id="seat-name-green">翡翠森林 AI</div>
+          <div class="seat-status" id="seat-status-green">電腦補位 (騎士)</div>
+          <button class="seat-claim-btn seat-select-btn" data-side="green">選邊站此處</button>
+        </div>
+
+        <!-- Purple Seat -->
+        <div id="brawl-seat-purple" class="brawl-seat-box purple" data-side="purple">
+          <div class="seat-badge purple">🟪 東方陣營</div>
+          <div class="seat-avatar" id="seat-avatar-purple">🤖</div>
+          <div class="seat-name" id="seat-name-purple">虛空暗影 AI</div>
+          <div class="seat-status" id="seat-status-purple">電腦補位 (傳奇)</div>
+          <button class="seat-claim-btn seat-select-btn" data-side="purple">選邊站此處</button>
+        </div>
+      </div>
+
+      <!-- 👥 Real Friends Room Multiplayer Bar -->
+      <div class="brawl-online-dock">
+        <div class="brawl-online-header">
+          <span class="online-title">👥 真人好友房間連線 (支援 1-4 位真人，不足自動補位智慧 AI)</span>
+          <span class="online-tip" id="brawl-online-status-text">可直接開戰（AI自動補滿），亦可發送代碼邀請多名真人好友一起混戰！</span>
+        </div>
+        <div class="brawl-online-controls">
+          <div class="room-code-box">
+            <span class="code-tag">房間代碼：</span>
+            <span class="code-val" id="brawl-room-code-val">尚未建立</span>
+            <button id="btn-brawl-create-code" class="action-btn confirm tiny">建立好友房間</button>
+            <button id="btn-brawl-copy-link" class="copy-small-btn hidden" title="複製邀請連結">📋 複製邀請連結</button>
+          </div>
+          <div class="room-join-box">
+            <input type="text" id="input-brawl-join-code" placeholder="輸入好友房間代碼" maxlength="8" spellcheck="false">
+            <button id="btn-brawl-join-code" class="action-btn secondary tiny">加入好友房間</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brawl Options -->
+      <div class="brawl-config-row">
+        <label class="brawl-toggle-label">
+          <input type="checkbox" id="brawl-dynamic-hazards" checked>
+          <span>🌋 開啟戰場動態環境災害 (極地暴風雪、河道聖水符文搶奪、地脈熔岩)</span>
+        </label>
+      </div>
+
+      <div class="dialog-buttons">
+        <button id="btn-close-brawl" class="action-btn cancel">返回大廳</button>
+        <button id="btn-start-brawl-match" class="action-btn confirm highlight">💥 展開四人混戰！</button>
       </div>
     </div>
   </div>
@@ -895,6 +1037,65 @@
     </div>
   </div>
 
+  <!-- 🧪 8-Account Full Functionality Live Test Center Modal -->
+  <div id="multi-test-modal" class="modal-backdrop hidden">
+    <div class="dialog-card super-large multi-test-card">
+      <div class="deck-panel-header">
+        <div class="multi-test-header-title">
+          <span class="multi-test-icon">🧪</span>
+          <div>
+            <h2 class="dialog-title">8 帳號全功能實況測試中心</h2>
+            <p class="panel-tip" style="margin: 2px 0 0 0;">8 組獨立隔離測試帳號 · 12 大核心系統全自動高併發檢測 · 實況日誌流</p>
+          </div>
+        </div>
+        <button id="btn-close-multi-test" class="action-btn cancel small">關閉視窗</button>
+      </div>
+
+      <!-- Action & Control Bar -->
+      <div class="multi-test-action-bar">
+        <div class="multi-test-action-buttons">
+          <button id="btn-run-multi-test" class="royal-btn confirm highlight pulse-glow">
+            <span>▶️ 啟動 8 帳號全功能並行實況測試</span>
+          </button>
+          <button id="btn-launch-desktop-windows" class="royal-btn secondary">
+            <span>🚀 桌面分屏開啟 8 個獨立瀏覽器視窗</span>
+          </button>
+        </div>
+        <div class="multi-test-overall-stats">
+          <div class="stat-pill"><span class="stat-label">測試進度:</span> <span id="multi-test-progress-text" class="stat-val">0%</span></div>
+          <div class="stat-pill"><span class="stat-label">檢測項目:</span> <span id="multi-test-cases-text" class="stat-val">0 / 12</span></div>
+          <div class="stat-pill"><span class="stat-label">狀態:</span> <span id="multi-test-status-text" class="stat-val ready">待命中</span></div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="multi-test-progress-container">
+        <div id="multi-test-progress-bar" class="multi-test-progress-fill" style="width: 0%;"></div>
+      </div>
+
+      <!-- 8 Accounts Status Grid -->
+      <div class="multi-accounts-grid" id="multi-accounts-grid">
+        <!-- Rendered dynamically by menu.js with rich cards -->
+      </div>
+
+      <!-- Live Terminal Console Log -->
+      <div class="multi-test-console-section">
+        <div class="console-header">
+          <div class="console-title">
+            <span class="console-dot green"></span>
+            <span class="console-dot yellow"></span>
+            <span class="console-dot red"></span>
+            <span class="console-name">實時測試日誌輸出 (Real-time Diagnostic Stream)</span>
+          </div>
+          <button id="btn-clear-multi-log" class="console-clear-btn">清空記錄</button>
+        </div>
+        <div id="multi-test-log-output" class="multi-test-log-body">
+          <div class="log-line info"><span class="log-time">[系統]</span> 測試中心已就緒。點擊「啟動 8 帳號全功能並行實況測試」開始驗證，或點擊「桌面分屏開啟 8 個獨立瀏覽器視窗」在 Windows 桌面同時操作 8 個帳號！</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Card Wiki Encyclopedia Modal -->
   <div id="cards-wiki-modal" class="modal-backdrop hidden">
     <div class="dialog-card large">
@@ -942,6 +1143,17 @@
       <div class="dialog-buttons">
         <button id="btn-rematch" class="action-btn confirm">再來一局</button>
         <button id="btn-result-menu" class="action-btn cancel">返回主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Landscape Hint -->
+  <div id="landscape-hint" class="landscape-hint hidden">
+    <div class="landscape-hint-box">
+      <span class="landscape-hint-icon">📱 🔄</span>
+      <div class="landscape-hint-text">
+        <strong>建議旋轉至直屏遊玩</strong>
+        <p>直屏 (Portrait) 可獲得最佳手指觸控與下兵視野！</p>
       </div>
     </div>
   </div>

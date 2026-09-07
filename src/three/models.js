@@ -7,13 +7,28 @@ import * as THREE from 'three';
 
 const materialsCache = new Map();
 
-function getTeamMaterial(type, isBlue, extra = {}) {
-  const key = `${type}_${isBlue ? 'blue' : 'red'}_${JSON.stringify(extra)}`;
+function getTeamMaterial(type, isBlueOrTeam, extra = {}) {
+  const team = typeof isBlueOrTeam === 'string' ? isBlueOrTeam : (isBlueOrTeam ? 'blue' : 'red');
+  const key = `${type}_${team}_${JSON.stringify(extra)}`;
   if (materialsCache.has(key)) return materialsCache.get(key);
 
-  const teamColor = isBlue ? 0x1e68ff : 0xff2453;
-  const teamDark = isBlue ? 0x0c3a9e : 0x940c2a;
-  const teamLight = isBlue ? 0x60a5fa : 0xfb7185;
+  let teamColor = 0x1e68ff;
+  let teamDark = 0x0c3a9e;
+  let teamLight = 0x60a5fa;
+
+  if (team === 'red') {
+    teamColor = 0xff2453;
+    teamDark = 0x940c2a;
+    teamLight = 0xfb7185;
+  } else if (team === 'green') {
+    teamColor = 0x00e676;
+    teamDark = 0x007034;
+    teamLight = 0x69f0ae;
+  } else if (team === 'purple') {
+    teamColor = 0xd500f9;
+    teamDark = 0x6a0080;
+    teamLight = 0xea80fc;
+  }
 
   let mat;
   switch (type) {

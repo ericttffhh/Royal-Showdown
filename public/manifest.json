@@ -1,0 +1,19 @@
+{
+  "name": "皇室對決 3D - Royal Showdown",
+  "short_name": "皇室對決3D",
+  "description": "3D 即時卡牌競技遊戲，支援四人亂鬥、2v2合作防禦與雙人對決",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d17",
+  "theme_color": "#090d17",
+  "icons": [
+    {
+      "src": "/cover.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment", "strategy"]
+}

@@ -6,9 +6,10 @@ import { inventory } from '../game/inventory.js';
  */
 
 export class DeckBarUI {
-  constructor(arena, onCardPlaced) {
+  constructor(arena, onCardPlaced, canDeployCheck = null) {
     this.arena = arena;
     this.onCardPlaced = onCardPlaced;
+    this.canDeployCheck = canDeployCheck;
 
     this.deckQueue = [];
     this.hand = [];
@@ -101,6 +102,11 @@ export class DeckBarUI {
       this.arena.setDeploymentVisual(false);
     } else {
       this.selectedCardId = cardId;
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(12);
+        }
+      } catch (e) {}
       this.arena.setDeploymentVisual(true, true);
     }
     this.renderHand();
@@ -131,6 +137,21 @@ export class DeckBarUI {
   setupArenaInteractions() {
     const container = this.arena.container;
 
+    const handlePointerMove = (clientX, clientY) => {
+      if (!this.selectedCardId) return;
+
+      const intersection = this.arena.getArenaIntersection(clientX, clientY);
+      if (intersection) {
+        const card = CARDS[this.selectedCardId];
+        const isSpell = card?.type === 'spell';
+        const isBlueSide = intersection.z > 0;
+        const isValid = this.canDeployCheck
+          ? this.canDeployCheck(intersection.x, intersection.z, isSpell)
+          : (isSpell || isBlueSide);
+        this.arena.setDeploymentVisual(true, isValid, intersection, card?.radius || 1.0);
+      }
+    };
+
     container.addEventListener('pointerdown', (e) => {
       if (!this.selectedCardId) return;
 
@@ -141,6 +162,11 @@ export class DeckBarUI {
         const canDeploy = this.onCardPlaced(this.selectedCardId, intersection, isSpell);
 
         if (canDeploy) {
+          try {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate(18);
+            }
+          } catch (err) {}
           this.cycleCard(this.selectedCardId);
           this.selectedCardId = null;
           this.arena.setDeploymentVisual(false);
@@ -150,16 +176,14 @@ export class DeckBarUI {
     });
 
     container.addEventListener('pointermove', (e) => {
-      if (!this.selectedCardId) return;
-
-      const intersection = this.arena.getArenaIntersection(e.clientX, e.clientY);
-      if (intersection) {
-        const isBlueSide = intersection.z > 0;
-        const card = CARDS[this.selectedCardId];
-        const isValid = card?.type === 'spell' || isBlueSide;
-        this.arena.setDeploymentVisual(true, isValid);
-      }
+      handlePointerMove(e.clientX, e.clientY);
     });
+
+    container.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
   }
 
   cycleCard(usedCardId) {

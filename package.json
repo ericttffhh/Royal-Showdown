@@ -12,6 +12,8 @@
     "start": "vite build && electron .",
     "build": "vite build",
     "preview": "vite preview",
+    "test:8acc": "node scripts/test_8_accounts.js",
+    "test:8browsers": "node scripts/launch_8_browsers.js",
     "electron:dev": "vite",
     "dist:win": "vite build && electron-builder --win nsis",
     "dist:win:portable": "vite build && electron-builder --win portable",
@@ -33,11 +35,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -58,5 +64,8 @@
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "vite": "^6.0.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.63.1"
   }
 }

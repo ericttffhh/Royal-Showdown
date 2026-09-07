@@ -10,6 +10,7 @@ import { DeckBarUI } from './ui/deckBar.js';
 import { MenuUI } from './ui/menu.js';
 import { sounds } from './audio/sound.js';
 import { inventory } from './game/inventory.js';
+import { auth } from './game/auth.js';
 
 class ClashRoyaleApp {
   constructor() {
@@ -27,6 +28,7 @@ class ClashRoyaleApp {
       onElixirChange: (elixir) => this.deckBarUI?.updateElixir(elixir),
       onTimeChange: (timeStr, rawTime) => this.updateTimerUI(timeStr, rawTime),
       onAnnouncement: (msg) => this.menuUI?.showAnnouncement(msg),
+      onBrawlUpdate: (status) => this.menuUI?.updateBrawlHud(status),
       onGameOver: (result, scores) => {
         sounds.stopBGM();
         this.inBattle = false;
@@ -81,18 +83,42 @@ class ClashRoyaleApp {
       }
     });
 
-    // 4. 初始化 WebRTC P2P 網路
+    // 4. 初始化 WebRTC P2P 網路 (支援 1v1 與四人大亂鬥多人房間)
+    this.brawlRoom = {
+      isHost: false,
+      code: '',
+      mySide: 'blue',
+      seats: {
+        blue: { name: inventory.data.username || '皇家領主', isHuman: true, isMe: true },
+        red: { name: '狂暴烈焰 AI', isHuman: false, isMe: false },
+        green: { name: '翡翠森林 AI', isHuman: false, isMe: false },
+        purple: { name: '虛空暗影 AI', isHuman: false, isMe: false }
+      }
+    };
+
     this.network = new NetworkEngine({
       onConnected: (isHost) => this.handleNetworkConnected(isHost),
-      onData: (data) => this.handleNetworkData(data),
+      onData: (data, senderId) => this.handleNetworkData(data, senderId),
       onError: (msg) => this.handleNetworkError(msg),
-      onDisconnected: () => this.handleNetworkDisconnected()
+      onDisconnected: () => this.handleNetworkDisconnected(),
+      onPeerJoined: (peerId, count) => this.handlePeerJoined(peerId, count),
+      onPeerLeft: (peerId, count) => this.handlePeerLeft(peerId, count)
     });
 
     // 5. 初始化出戰手牌 HUD
-    this.deckBarUI = new DeckBarUI(this.arena, (cardId, pos, isSpell) => {
-      return this.handlePlayerCardDeploy(cardId, pos, isSpell);
-    });
+    this.deckBarUI = new DeckBarUI(
+      this.arena,
+      (cardId, pos, isSpell) => {
+        return this.handlePlayerCardDeploy(cardId, pos, isSpell);
+      },
+      (x, z, isSpell) => {
+        let deploySide = this.battle.playerTeam || 'blue';
+        if (this.mode === 'local') {
+          deploySide = (z > 0 || isSpell) ? 'blue' : 'red';
+        }
+        return this.battle.canDeployAt(x, z, deploySide, isSpell);
+      }
+    );
 
     // 6. 初始化繁體主選單、抽卡寶箱與牌組系統
     this.menuUI = new MenuUI({
@@ -101,11 +127,15 @@ class ClashRoyaleApp {
       onStart7X: () => this.start7XMode(),
       onStartDraft: (playerDeck, aiDeck) => this.startDraftMode(playerDeck, aiDeck),
       onStartPvE: () => this.startPvEMode(),
+      onStartBrawl: (options) => this.startBrawlMode(options),
+      onStart2v2: () => this.start2v2Mode(),
       onStartMatchmaking: () => this.matchmaker.startSearching(),
       onCancelMatchmaking: () => this.matchmaker.cancelSearching(),
       onOpenOnlineModal: () => this.initOnlineHost(),
       onJoinRoom: (code) => this.joinOnlineRoom(code),
       onCancelOnline: () => this.network.disconnect(),
+      onCreateBrawlRoom: (onCode) => this.initBrawlHost(onCode),
+      onJoinBrawlRoom: (code) => this.joinBrawlRoom(code),
       onStartLocal: () => this.startLocalMode(),
       onSendEmote: (emote) => this.handleSendEmote(emote),
       onRematch: () => this.restartMatch(),
@@ -144,6 +174,8 @@ class ClashRoyaleApp {
     this.aiController.difficulty = difficulty;
     document.getElementById('battle-mode-badge').textContent = `人機 (${difficulty === 'hard' ? '傳奇大師' : (difficulty === 'medium' ? '皇家騎士' : '新手法師')})`;
     document.getElementById('enemy-name').textContent = '電腦對手 (AI)';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+    this.battle.setBattleMode('classic');
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM();
@@ -157,6 +189,8 @@ class ClashRoyaleApp {
     this.aiController.setDeck(['mecha_golem', 'cyber_ninja', 'thunder_valkyrie', 'phoenix_mage', 'fireball', 'wizard', 'giant', 'inferno']);
     document.getElementById('battle-mode-badge').textContent = '🦾 泰坦首領討伐 (Boss Rush)';
     document.getElementById('enemy-name').textContent = '【狂暴滅世】泰坦機甲魔像 🦾';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+    this.battle.setBattleMode('classic');
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM(true);
@@ -187,6 +221,8 @@ class ClashRoyaleApp {
     document.getElementById('battle-mode-badge').textContent = '⚡ 天梯實時排位賽';
     document.getElementById('enemy-name').textContent = opponent.name;
     document.getElementById('enemy-tag').textContent = opponent.tag;
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+    this.battle.setBattleMode('classic');
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM();
@@ -200,6 +236,8 @@ class ClashRoyaleApp {
     this.aiController.difficulty = 'hard';
     document.getElementById('battle-mode-badge').textContent = '⚡ 7X 無限聖水狂歡';
     document.getElementById('enemy-name').textContent = '瘋狂聖水 AI';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+    this.battle.setBattleMode('classic');
     this.resetMatch();
     this.battle.is7XElixir = true;
     this.battle.startBattle();
@@ -216,6 +254,8 @@ class ClashRoyaleApp {
     this.deckBarUI.setCustomDeck(playerDeck);
     document.getElementById('battle-mode-badge').textContent = '🎲 輪選選卡大挑戰';
     document.getElementById('enemy-name').textContent = '輪選 AI 挑戰者';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+    this.battle.setBattleMode('classic');
     this.battle.reset();
     this.updateCrownsUI(0, 0);
     this.battle.startBattle();
@@ -228,6 +268,8 @@ class ClashRoyaleApp {
     this.inBattle = true;
     document.getElementById('battle-mode-badge').textContent = '🛡️ PVE 無盡怪獸防守 (共20波)';
     document.getElementById('enemy-name').textContent = '無盡怪獸首領軍團';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+    this.battle.setBattleMode('classic');
     this.resetMatch();
     this.pveManager.startPvE();
     this.battle.startBattle();
@@ -235,11 +277,80 @@ class ClashRoyaleApp {
     this.menuUI.showAnnouncement('🛡️ 守護國王塔！怪物大軍即將入侵！');
   }
 
+  startBrawlMode(options = {}) {
+    this.mode = 'brawl';
+    this.inBattle = true;
+    this.pveManager.stopPvE();
+
+    const mySide = options.side || 'blue';
+    const sideNames = {
+      blue: '🟦 藍方 (南方)',
+      red: '🟥 紅方 (北方)',
+      green: '🟩 綠方 (西方)',
+      purple: '🟪 紫方 (東方)'
+    };
+
+    document.getElementById('battle-mode-badge').textContent = '💥 四人混戰大亂鬥';
+    document.getElementById('enemy-name').textContent = '3方混戰群雄';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (${sideNames[mySide]})`;
+
+    const humanTeams = [];
+    if (this.brawlRoom && this.brawlRoom.seats) {
+      Object.keys(this.brawlRoom.seats).forEach(s => {
+        if (this.brawlRoom.seats[s].isHuman) humanTeams.push(s);
+      });
+    }
+    if (!humanTeams.includes(mySide)) humanTeams.push(mySide);
+
+    this.menuUI.enterBattleView('brawl');
+    this.battle.setBattleMode('brawl', {
+      playerTeam: mySide,
+      humanTeams,
+      hazards: options.hazards !== false
+    });
+
+    if (this.network.isHost && this.network.getConnectedCount() > 0) {
+      this.network.send({
+        type: 'brawl_start',
+        hazards: options.hazards !== false
+      });
+    }
+
+    this.resetMatch();
+    this.battle.startBattle();
+    sounds.startBattleBGM(true);
+    this.menuUI.showAnnouncement(`💥 四人大亂鬥開啟！你鎮守【${sideNames[mySide]}】！`);
+    this.menuUI.updateBrawlHud(this.battle.getBrawlStatus());
+  }
+
+  start2v2Mode() {
+    this.mode = 'coop';
+    this.inBattle = true;
+    this.pveManager.stopPvE();
+    this.aiController.difficulty = 'hard';
+
+    this.menuUI.enterBattleView('coop');
+    document.getElementById('battle-mode-badge').textContent = '🛡️ 雙人合作防守 (2v2)';
+    document.getElementById('enemy-name').textContent = '雙路進攻敵軍';
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} + AI 盟友`;
+
+    this.battle.setBattleMode('coop', {
+      playerTeam: 'blue',
+      hazards: true
+    });
+    this.resetMatch();
+    this.battle.startBattle();
+    sounds.startBattleBGM();
+    this.menuUI.showAnnouncement('🛡️ 2v2 雙人合作防守！皇家守護盟友與你並肩作戰！');
+  }
+
   startLocalMode() {
     this.mode = 'local';
     this.inBattle = true;
     document.getElementById('battle-mode-badge').textContent = '本地 1v1 演練 (雙方皆可下牌)';
     document.getElementById('enemy-name').textContent = '紅方選手 (本地)';
+    document.getElementById('player-name').textContent = '藍方選手 (本地)';
+    this.battle.setBattleMode('classic');
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM();
@@ -273,10 +384,107 @@ class ClashRoyaleApp {
     sounds.startBattleBGM();
   }
 
-  handleNetworkData(data) {
+  initBrawlHost(onCodeReady) {
+    this.brawlRoom.isHost = true;
+    this.brawlRoom.mySide = 'blue';
+    this.brawlRoom.seats = {
+      blue: { name: inventory.data.username || '皇家領主', isHuman: true, isMe: true },
+      red: { name: '狂暴烈焰 AI', isHuman: false, isMe: false },
+      green: { name: '翡翠森林 AI', isHuman: false, isMe: false },
+      purple: { name: '虛空暗影 AI', isHuman: false, isMe: false }
+    };
+    this.network.createRoom((code) => {
+      this.brawlRoom.code = code;
+      onCodeReady?.(code);
+    }, 'brawl');
+  }
+
+  joinBrawlRoom(code) {
+    this.brawlRoom.isHost = false;
+    this.brawlRoom.code = code.trim().toUpperCase();
+    this.network.joinRoom(code, 'brawl');
+  }
+
+  handlePeerJoined(peerId, count) {
+    if (this.brawlRoom.isHost) {
+      // 房主給新加入的真人好友分配席位
+      const available = ['red', 'green', 'purple', 'blue'].filter(s => !this.brawlRoom.seats[s].isHuman);
+      const assign = available[0];
+      if (assign) {
+        this.brawlRoom.seats[assign] = {
+          name: `真人好友 #${peerId.slice(-4)}`,
+          peerId,
+          isHuman: true,
+          isMe: false
+        };
+        this.menuUI.updateBrawlSeatsState(this.brawlRoom.seats);
+        this.network.send({
+          type: 'brawl_room_sync',
+          seats: this.brawlRoom.seats
+        });
+        this.menuUI.showAnnouncement('🎉 有真人好友加入大亂鬥房間！已成功入座！');
+        sounds.playFanfare();
+      }
+    }
+  }
+
+  handlePeerLeft(peerId, count) {
+    if (this.brawlRoom.isHost) {
+      Object.keys(this.brawlRoom.seats).forEach(side => {
+        if (this.brawlRoom.seats[side].peerId === peerId) {
+          const botDefaults = {
+            red: '狂暴烈焰 AI',
+            green: '翡翠森林 AI',
+            purple: '虛空暗影 AI',
+            blue: '海潮領主 AI'
+          };
+          this.brawlRoom.seats[side] = {
+            name: botDefaults[side],
+            isHuman: false,
+            isMe: false
+          };
+        }
+      });
+      this.menuUI.updateBrawlSeatsState(this.brawlRoom.seats);
+      this.network.send({
+        type: 'brawl_room_sync',
+        seats: this.brawlRoom.seats
+      });
+      this.menuUI.showAnnouncement('⚠️ 有好友離開了房間，該席位已由 AI 替補');
+    }
+  }
+
+  handleNetworkData(data, senderId) {
     if (!data) return;
 
-    if (data.type === 'deploy') {
+    if (data.type === 'brawl_room_sync') {
+      const myId = this.network.peer?.id;
+      const mySeats = JSON.parse(JSON.stringify(data.seats));
+      Object.keys(mySeats).forEach(s => {
+        if (mySeats[s].peerId === myId) {
+          mySeats[s].isMe = true;
+          this.brawlRoom.mySide = s;
+        }
+      });
+      this.brawlRoom.seats = mySeats;
+      this.menuUI.updateBrawlSeatsState(mySeats);
+      const statusText = document.getElementById('brawl-online-status-text');
+      if (statusText) statusText.textContent = `✅ 連線成功！你已被分配在【${this.brawlRoom.mySide.toUpperCase()}】席位，等待房主開戰...`;
+      this.menuUI.showAnnouncement('✅ 已成功進入好友的大亂鬥房間！');
+      sounds.playVictory();
+    } else if (data.type === 'brawl_start') {
+      document.getElementById('brawl-room-modal')?.classList.add('hidden');
+      this.startBrawlMode({
+        side: this.brawlRoom.mySide,
+        hazards: data.hazards
+      });
+    } else if (data.type === 'brawl_deploy') {
+      this.battle.deployCard(data.cardId, { x: data.x, z: data.z }, data.team);
+      if (this.network.isHost) {
+        // 房主群發給其他客端
+        this.network.send(data);
+      }
+    } else if (data.type === 'deploy') {
       const invX = -data.x;
       const invZ = -data.z;
       this.battle.deployCard(data.cardId, { x: invX, z: invZ }, false);
@@ -313,6 +521,8 @@ class ClashRoyaleApp {
   handleNetworkError(msg) {
     const el = document.getElementById('join-status-message');
     if (el) el.textContent = msg;
+    const brawlStatus = document.getElementById('brawl-online-status-text');
+    if (brawlStatus) brawlStatus.textContent = `❌ ${msg}`;
   }
 
   handleNetworkDisconnected() {
@@ -320,30 +530,42 @@ class ClashRoyaleApp {
   }
 
   handleSendEmote(emote) {
-    if (this.mode === 'online') {
+    if (this.mode === 'online' || (this.mode === 'brawl' && this.network.getConnectedCount() > 0)) {
       this.network.send({ type: 'emote', emote });
     }
   }
 
   // -------------------------------------------------------------
-  // 卡牌部署處理 (支援本地 1v1 雙向部署)
+  // 卡牌部署處理 (支援本地 1v1 雙向部署與大亂鬥多方)
   // -------------------------------------------------------------
 
   handlePlayerCardDeploy(cardId, pos, isSpell) {
-    // 本地 1v1 模式下，若點擊在紅方半場 (z < 0)，則視為紅方出兵！
-    const isBlue = this.mode === 'local' ? (pos.z > 0 || isSpell) : true;
+    let deploySide = this.battle.playerTeam || 'blue';
+    if (this.mode === 'local') {
+      deploySide = (pos.z > 0 || isSpell) ? 'blue' : 'red';
+    }
 
-    const canDeploy = this.battle.canDeployAt(pos.x, pos.z, isBlue, isSpell);
+    const canDeploy = this.battle.canDeployAt(pos.x, pos.z, deploySide, isSpell);
     if (!canDeploy) return false;
 
-    const success = this.battle.deployCard(cardId, pos, isBlue);
-    if (success && this.mode === 'online') {
-      this.network.send({
-        type: 'deploy',
-        cardId,
-        x: pos.x,
-        z: pos.z
-      });
+    const success = this.battle.deployCard(cardId, pos, deploySide);
+    if (success) {
+      if (this.mode === 'online') {
+        this.network.send({
+          type: 'deploy',
+          cardId,
+          x: pos.x,
+          z: pos.z
+        });
+      } else if (this.mode === 'brawl' && this.network.getConnectedCount() > 0) {
+        this.network.send({
+          type: 'brawl_deploy',
+          cardId,
+          x: pos.x,
+          z: pos.z,
+          team: deploySide
+        });
+      }
     }
 
     return success;
@@ -375,8 +597,11 @@ class ClashRoyaleApp {
     this.pveManager.stopPvE();
     this.matchmaker.cancelSearching();
     this.arena.resetCamera(true);
+    this.arena.setBrawlLayout(false);
+    this.battle.setBattleMode('classic');
     this.battle.reset();
     this.network.disconnect();
+    this.menuUI.exitBattleView();
     sounds.startLobbyBGM();
   }
 
@@ -389,13 +614,16 @@ class ClashRoyaleApp {
 
   updateTimerUI(timeStr, rawTime) {
     const timerEl = document.getElementById('battle-timer');
-    if (!timerEl) return;
-    timerEl.textContent = timeStr;
+    const brawlTimerEl = document.getElementById('brawl-battle-timer');
+    if (timerEl) timerEl.textContent = timeStr;
+    if (brawlTimerEl) brawlTimerEl.textContent = timeStr;
 
     if (rawTime <= 30) {
-      timerEl.classList.add('hurry');
+      timerEl?.classList.add('hurry');
+      brawlTimerEl?.classList.add('hurry');
     } else {
-      timerEl.classList.remove('hurry');
+      timerEl?.classList.remove('hurry');
+      brawlTimerEl?.classList.remove('hurry');
     }
   }
 
@@ -419,6 +647,10 @@ class ClashRoyaleApp {
 
       this.battle.update(deltaTime);
 
+      if (this.mode === 'brawl') {
+        this.menuUI.updateBrawlHud(this.battle.getBrawlStatus());
+      }
+
       // 🌐 線上對戰房主每 100ms 廣播高頻狀態同步校正封包 (10Hz Master Authority Sync)
       if (this.mode === 'online' && this.network.isHost) {
         this.lastHostSync = this.lastHostSync || 0;
@@ -439,6 +671,17 @@ class ClashRoyaleApp {
 
     this.arena.render(deltaTime);
   }
+
+  joinBrawlFromUrl(roomCode) {
+    document.getElementById('nav-btn-battle')?.click();
+    this.menuOverlay?.classList.add('hidden');
+    document.getElementById('brawl-room-modal')?.classList.remove('hidden');
+    const input = document.getElementById('input-brawl-join-code');
+    if (input) input.value = roomCode;
+    const statusText = document.getElementById('brawl-online-status-text');
+    if (statusText) statusText.textContent = `⏳ 正在透過邀請連結連線至好友房間【${roomCode.toUpperCase()}】...`;
+    this.joinBrawlRoom(roomCode);
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -455,5 +698,44 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   } catch (e) {}
 
-  new ClashRoyaleApp();
+  const app = new ClashRoyaleApp();
+
+  // 👥 檢查大亂鬥好友邀請參數 (?brawl=CODE) 與 8 帳號測試設定 (?user=xxx&side=xxx)
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const brawlCode = urlParams.get('brawl');
+    const userParam = urlParams.get('user');
+    const sideParam = urlParams.get('side');
+
+    if (userParam && !localStorage.getItem('royal_acc_named')) {
+      const names = {
+        'test_blue': '領主1號·藍龍',
+        'test_red': '領主2號·烈焰',
+        'test_green': '領主3號·翡翠',
+        'test_purple': '領主4號·虛空',
+        'test_ladder': '領主5號·天梯神',
+        'test_coop': '領主6號·守護者',
+        'test_boss': '領主7號·泰坦獵人',
+        'test_7x': '領主8號·聖水狂人'
+      };
+      if (auth.currentUser) {
+        auth.currentUser.username = names[userParam] || userParam;
+        auth.saveAccounts();
+        localStorage.setItem('royal_acc_named', 'true');
+        app.menu?.updateProfileBar?.();
+      }
+    }
+
+    if (sideParam && app.menu) {
+      app.menu.selectedBrawlSide = sideParam;
+      app.menu.updateBrawlSeatsUI?.();
+    }
+
+    if (brawlCode) {
+      setTimeout(() => {
+        app.joinBrawlFromUrl(brawlCode);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 600);
+    }
+  } catch (e) {}
 });
