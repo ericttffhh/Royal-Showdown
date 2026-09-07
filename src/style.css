@@ -3632,56 +3632,241 @@ body, html {
   color: #002b20;
 }
 
-/* Daily Cards Grid */
+/* Section Header Box with Timer and Refresh */
+.shop-section-header-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+  margin-bottom: 8px;
+}
+
+.shop-refresh-dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shop-refresh-timer {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+#shop-refresh-countdown {
+  color: var(--royal-gold);
+  font-family: monospace;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.royal-btn-mini-refresh {
+  background: linear-gradient(135deg, rgba(30, 96, 255, 0.4) 0%, rgba(123, 0, 187, 0.5) 100%);
+  border: 1px solid rgba(0, 255, 196, 0.5);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.royal-btn-mini-refresh:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(0, 255, 196, 0.4);
+  border-color: #00ffc4;
+}
+
+/* Daily Cards Grid (6 Slots) */
 .shop-daily-cards-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
   width: 100%;
 }
 
 .shop-daily-card-item {
-  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+  background: rgba(14, 20, 36, 0.85);
   border: 1.5px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  padding: 10px 8px;
+  padding: 24px 6px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.shop-daily-card-item.rarity-common { border-color: #8da4be; }
-.shop-daily-card-item.rarity-rare { border-color: #ff9900; }
-.shop-daily-card-item.rarity-epic { border-color: #c42eff; }
-.shop-daily-card-item.rarity-legendary { border-color: #00ffc4; }
 
-.daily-card-icon { font-size: 32px; }
-.daily-card-name { font-size: 12px; font-weight: 700; color: #fff; }
-.daily-card-count { font-size: 10px; color: var(--royal-gold); font-weight: 700; }
+.shop-daily-card-item:hover {
+  transform: translateY(-3px);
+}
+
+.shop-daily-card-item.rarity-common {
+  border-color: rgba(141, 164, 190, 0.5);
+  box-shadow: 0 4px 12px rgba(141, 164, 190, 0.1);
+}
+.shop-daily-card-item.rarity-rare {
+  border-color: rgba(255, 153, 0, 0.7);
+  box-shadow: 0 4px 14px rgba(255, 153, 0, 0.15);
+}
+.shop-daily-card-item.rarity-epic {
+  border-color: rgba(196, 46, 255, 0.8);
+  box-shadow: 0 4px 18px rgba(196, 46, 255, 0.22);
+}
+.shop-daily-card-item.rarity-legendary {
+  border-color: rgba(0, 255, 196, 0.9);
+  box-shadow: 0 4px 22px rgba(0, 255, 196, 0.35);
+  animation: legShopGlow 3s infinite alternate ease-in-out;
+}
+
+@keyframes legShopGlow {
+  0% { box-shadow: 0 0 10px rgba(0, 255, 196, 0.2); }
+  100% { box-shadow: 0 0 24px rgba(0, 255, 196, 0.6); }
+}
+
+.deal-discount-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, #ff3b30, #ff9500);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  text-align: center;
+  padding: 3px 0;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.shop-daily-card-item.rarity-legendary .deal-discount-badge {
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+}
+
+.daily-card-icon-wrap {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.daily-card-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+
+.daily-card-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.daily-card-rarity-tag {
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.daily-card-rarity-tag.common { background: rgba(141, 164, 190, 0.25); color: #cbd5e1; }
+.daily-card-rarity-tag.rare { background: rgba(255, 153, 0, 0.25); color: #ffbe24; }
+.daily-card-rarity-tag.epic { background: rgba(196, 46, 255, 0.25); color: #e9d5ff; }
+.daily-card-rarity-tag.legendary { background: rgba(0, 255, 196, 0.25); color: #6ee7b7; }
+
+.daily-card-count {
+  font-size: 10px;
+  color: var(--royal-gold);
+  font-weight: 700;
+}
+
+.deal-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 2px 0;
+}
+
+.deal-orig-price {
+  font-size: 9px;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.deal-curr-price {
+  font-size: 10.5px;
+  font-weight: 900;
+  color: var(--royal-gold-light);
+}
+
+.deal-curr-price .price-free {
+  color: #00ffc4;
+  font-weight: 900;
+}
+
 .daily-card-buy-btn {
   margin-top: 4px;
   width: 100%;
-  padding: 6px 4px;
-  border-radius: 10px;
+  padding: 6px 2px;
+  border-radius: 8px;
   border: none;
   background: linear-gradient(135deg, #ffbe24 0%, #d48800 100%);
   color: #1a1200;
   font-weight: 900;
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
 }
-.daily-card-buy-btn:hover { transform: scale(1.05); }
 
-/* Supplies Grid */
+.daily-card-buy-btn:hover:not(:disabled) {
+  transform: scale(1.04);
+  filter: brightness(1.1);
+}
+
+/* Sold Out State */
+.shop-daily-card-item.is-sold-out {
+  filter: grayscale(0.85);
+  opacity: 0.6;
+}
+
+.shop-daily-card-item.is-sold-out:hover {
+  transform: none;
+}
+
+.daily-card-buy-btn.sold-out,
+.daily-card-buy-btn:disabled {
+  background: #334155 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Supplies Grid (Gold & Gems Exchange) */
 .shop-supplies-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 
 .supply-card {
-  background: rgba(255, 255, 255, 0.04);
+  position: relative;
+  background: rgba(14, 20, 36, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 12px 8px;
@@ -3689,41 +3874,85 @@ body, html {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  transition: transform 0.2s ease;
 }
+
+.supply-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 190, 36, 0.4);
+}
+
+.supply-badge-tag {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: var(--royal-gold);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 190, 36, 0.3);
+}
+
 .supply-icon { font-size: 28px; }
-.supply-title { font-size: 11px; color: var(--text-muted); font-weight: 700; }
-.supply-val { font-size: 14px; font-weight: 900; color: #fff; }
+.supply-title { font-size: 11px; color: var(--text-muted); font-weight: 700; text-align: center; }
+.supply-val { font-size: 13.5px; font-weight: 900; color: #fff; }
+
 .supply-buy-btn {
   margin-top: 4px;
   width: 100%;
   padding: 6px 4px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: none;
   font-weight: 900;
-  font-size: 11px;
+  font-size: 10.5px;
   cursor: pointer;
+  transition: transform 0.15s ease;
 }
+
+.supply-buy-btn:hover {
+  transform: scale(1.03);
+}
+
 .supply-buy-btn.free {
   background: linear-gradient(135deg, #00ffc4 0%, #008f6b 100%);
   color: #002b20;
 }
+
 .supply-buy-btn.buy-gold {
   background: linear-gradient(135deg, #1e60ff 0%, #0c369e 100%);
   color: #fff;
 }
 
-@media (max-width: 768px) {
+.supply-buy-btn.buy-gems {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .shop-daily-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .shop-supplies-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (max-width: 600px) {
   .shop-chests-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
   .shop-daily-cards-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
   .shop-supplies-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
 }
 

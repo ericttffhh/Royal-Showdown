@@ -194,22 +194,22 @@
           <button class="lobby-chest-btn" data-chest="silver">
             <span class="chest-emoji">📦</span>
             <span class="chest-name">白銀寶箱</span>
-            <span class="chest-price">100 🪙</span>
+            <span class="chest-price">400 🪙</span>
           </button>
           <button class="lobby-chest-btn featured" data-chest="crown">
             <span class="chest-emoji">👑</span>
-            <span class="chest-name">皇冠寶箱</span>
-            <span class="chest-price">5 👑</span>
+            <span class="chest-name">皇冠尊爵寶箱</span>
+            <span class="chest-price">1,500 🪙</span>
           </button>
           <button class="lobby-chest-btn magic" data-chest="magical">
             <span class="chest-emoji">✨</span>
-            <span class="chest-name">神奇寶箱</span>
-            <span class="chest-price">80 💎</span>
+            <span class="chest-name">神奇魔力寶箱</span>
+            <span class="chest-price">280 💎</span>
           </button>
           <button class="lobby-chest-btn legendary" data-chest="legendary">
             <span class="chest-emoji">💎</span>
-            <span class="chest-name">傳奇寶箱</span>
-            <span class="chest-price">200 💎</span>
+            <span class="chest-name">傳奇超級神箱</span>
+            <span class="chest-price">750 💎</span>
           </button>
         </div>
       </div>
@@ -251,29 +251,31 @@
           <div class="chest-card-glow"></div>
           <div class="chest-big-icon">📦</div>
           <div class="chest-card-name">白銀寶箱</div>
-          <div class="chest-card-desc">包含 100~250 🪙 金幣，保證 5~10 張隨機兵團碎片</div>
+          <div class="chest-card-desc">包含 250~500 🪙 金幣，保證 6 張戰鬥卡牌碎片</div>
           <button class="shop-buy-chest-btn silver" data-chest="silver">
-            <span>🪙 100 金幣開啟</span>
+            <span>🪙 400 金幣開啟</span>
           </button>
         </div>
 
         <div class="shop-chest-card crown">
           <div class="chest-card-glow"></div>
+          <div class="chest-badge-top">超值精選</div>
           <div class="chest-big-icon">👑</div>
-          <div class="chest-card-name">皇冠寶箱</div>
-          <div class="chest-card-desc">包含 300~600 🪙 金幣，10 💎 寶石，高機率獲得稀有與史詩卡牌</div>
+          <div class="chest-card-name">皇冠尊爵寶箱</div>
+          <div class="chest-card-desc">包含 1000~2200 🪙 金幣，保證 16 張碎片，必出稀有與史詩！</div>
           <button class="shop-buy-chest-btn crown" data-chest="crown">
-            <span>👑 5 皇冠開啟</span>
+            <span>🪙 1,500 金幣開啟</span>
           </button>
         </div>
 
         <div class="shop-chest-card magic">
           <div class="chest-card-glow"></div>
-          <div class="chest-big-icon">🔮</div>
-          <div class="chest-card-name">神奇魔法寶箱</div>
-          <div class="chest-card-desc">包含 800~1500 🪙 金幣，25 💎 寶石，必得 2 張史詩卡牌</div>
+          <div class="chest-badge-top">史詩必得</div>
+          <div class="chest-big-icon">✨</div>
+          <div class="chest-card-name">神奇魔力寶箱</div>
+          <div class="chest-card-desc">包含 2200~4500 🪙 金幣，28 張碎片，必出 8 稀有 + 3 史詩！</div>
           <button class="shop-buy-chest-btn magic" data-chest="magical">
-            <span>💎 80 寶石開啟</span>
+            <span>💎 280 寶石開啟</span>
           </button>
         </div>
 
@@ -281,22 +283,29 @@
           <div class="chest-card-glow"></div>
           <div class="chest-badge-top">100% 必出傳奇</div>
           <div class="chest-big-icon">💎</div>
-          <div class="chest-card-name">超級傳奇寶箱</div>
-          <div class="chest-card-desc">包含 2500 🪙 金幣，100% 必中 4 大全新傳奇英雄卡牌之一！</div>
+          <div class="chest-card-name">傳奇超級神箱</div>
+          <div class="chest-card-desc">包含 6000~15000 🪙 金幣，45 張碎片，100% 保證必出傳奇英雄！</div>
           <button class="shop-buy-chest-btn legendary" data-chest="legendary">
-            <span>💎 200 寶石開啟</span>
+            <span>💎 750 寶石開啟</span>
           </button>
         </div>
       </div>
 
-      <!-- Section 2: 每日精選特惠碎片 -->
-      <div class="shop-section-title" style="margin-top: 20px;">⚡ 每日兵團精選特惠碎片</div>
+      <!-- Section 2: 每日精選特惠隨機刷新 (優惠價) -->
+      <div class="shop-section-header-box">
+        <div class="shop-section-title">⚡ 每日隨機特惠市場 (限時折扣 · 每日0點自動刷新)</div>
+        <div class="shop-refresh-dock">
+          <span class="shop-refresh-timer">⏳ 距下次刷新：<span id="shop-refresh-countdown">--:--:--</span></span>
+          <button id="btn-manual-refresh-shop" class="royal-btn-mini-refresh">🔄 立即重骰 (💎 10)</button>
+        </div>
+      </div>
       <div class="shop-daily-cards-grid" id="shop-daily-cards-grid"></div>
 
-      <!-- Section 3: 皇家金幣與寶石補給站 -->
-      <div class="shop-section-title" style="margin-top: 20px;">💎 皇家資源補給包</div>
+      <!-- Section 3: 皇家金幣與寶石雙向兌換補給站 -->
+      <div class="shop-section-title" style="margin-top: 24px;">💎 皇家國庫資源兌換所</div>
       <div class="shop-supplies-grid">
         <div class="supply-card free-gems">
+          <div class="supply-badge-tag">每日免費</div>
           <div class="supply-icon">💎</div>
           <div class="supply-title">每日免費寶石</div>
           <div class="supply-val">+50 💎</div>
@@ -311,6 +320,7 @@
         </div>
 
         <div class="supply-card gold-chest">
+          <div class="supply-badge-tag">熱銷</div>
           <div class="supply-icon">💰</div>
           <div class="supply-title">大箱金幣</div>
           <div class="supply-val">+4,500 🪙</div>
@@ -318,10 +328,35 @@
         </div>
 
         <div class="supply-card gold-vault">
+          <div class="supply-badge-tag">超值</div>
           <div class="supply-icon">👑</div>
           <div class="supply-title">國王黃金寶庫</div>
           <div class="supply-val">+12,000 🪙</div>
           <button class="supply-buy-btn buy-gold" data-gems="500" data-gold="12000">💎 500 寶石</button>
+        </div>
+
+        <!-- 雙向兌換：金幣換寶石 -->
+        <div class="supply-card gem-bag">
+          <div class="supply-icon">💎</div>
+          <div class="supply-title">小袋寶石</div>
+          <div class="supply-val">+40 💎</div>
+          <button class="supply-buy-btn buy-gems" data-gold="1000" data-gems="40">🪙 1,000 金幣</button>
+        </div>
+
+        <div class="supply-card gem-chest">
+          <div class="supply-badge-tag">熱銷</div>
+          <div class="supply-icon">🔮</div>
+          <div class="supply-title">大袋璀璨寶石</div>
+          <div class="supply-val">+150 💎</div>
+          <button class="supply-buy-btn buy-gems" data-gold="3000" data-gems="150">🪙 3,000 金幣</button>
+        </div>
+
+        <div class="supply-card gem-vault">
+          <div class="supply-badge-tag">頂級</div>
+          <div class="supply-icon">🌌</div>
+          <div class="supply-title">皇家秘境星鑽</div>
+          <div class="supply-val">+450 💎</div>
+          <button class="supply-buy-btn buy-gems" data-gold="8000" data-gems="450">🪙 8,000 金幣</button>
         </div>
       </div>
     </div>

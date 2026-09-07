@@ -434,11 +434,12 @@ export const TOWER_STATS = {
     targets: 'all'
   },
   king: {
-    hp: 4100,
-    damage: 125,
+    hp: 4000,
+    damage: 120,
     hitSpeed: 1.0,
     range: 7.0,
-    targets: 'all'
+    targets: 'all',
+    active: false
   }
 };
 
@@ -459,18 +460,18 @@ export function getCardScaledStats(cardId, level = 1) {
   };
 }
 
-// 升級消耗
+// 升級消耗 (Balanced Royale Progression Economy)
 export const UPGRADE_COSTS = [
   { level: 1, cardsNeeded: 0, goldNeeded: 0 },
-  { level: 2, cardsNeeded: 2, goldNeeded: 50 },
-  { level: 3, cardsNeeded: 4, goldNeeded: 150 },
-  { level: 4, cardsNeeded: 10, goldNeeded: 400 },
-  { level: 5, cardsNeeded: 20, goldNeeded: 1000 },
-  { level: 6, cardsNeeded: 50, goldNeeded: 2000 },
-  { level: 7, cardsNeeded: 100, goldNeeded: 4000 },
-  { level: 8, cardsNeeded: 200, goldNeeded: 8000 },
-  { level: 9, cardsNeeded: 400, goldNeeded: 20000 },
-  { level: 10, cardsNeeded: 800, goldNeeded: 50000 }
+  { level: 2, cardsNeeded: 2, goldNeeded: 100 },
+  { level: 3, cardsNeeded: 4, goldNeeded: 250 },
+  { level: 4, cardsNeeded: 10, goldNeeded: 600 },
+  { level: 5, cardsNeeded: 20, goldNeeded: 1500 },
+  { level: 6, cardsNeeded: 50, goldNeeded: 4000 },
+  { level: 7, cardsNeeded: 100, goldNeeded: 10000 },
+  { level: 8, cardsNeeded: 200, goldNeeded: 25000 },
+  { level: 9, cardsNeeded: 400, goldNeeded: 50000 },
+  { level: 10, cardsNeeded: 800, goldNeeded: 100000 }
 ];
 
 // 寶箱配置
@@ -479,65 +480,66 @@ export const CHESTS = {
     id: 'silver',
     name: '白銀寶箱',
     costType: 'gold',
-    cost: 100,
+    cost: 400,
     icon: '📦',
     color: '#8ba2b8',
-    cardCount: 4,
-    goldMin: 120,
-    goldMax: 200,
-    gemsMin: 0,
-    gemsMax: 2,
-    guaranteedRare: 0,
+    cardCount: 6,
+    goldMin: 250,
+    goldMax: 500,
+    gemsMin: 2,
+    gemsMax: 6,
+    guaranteedRare: 1,
     guaranteedEpic: 0,
-    description: '輕巧的白銀寶箱，包含基礎金幣與多張普通卡牌。'
+    description: '輕巧的白銀寶箱，包含基礎金幣與多張戰鬥卡牌。'
   },
   crown: {
     id: 'crown',
-    name: '皇冠寶箱',
-    costType: 'crowns',
-    cost: 5,
+    name: '皇冠尊爵寶箱',
+    costType: 'gold',
+    cost: 1500,
     icon: '👑',
     color: '#ffc107',
-    cardCount: 8,
-    goldMin: 350,
-    goldMax: 600,
-    gemsMin: 3,
-    gemsMax: 8,
-    guaranteedRare: 2,
-    guaranteedEpic: 0,
-    description: '透過戰鬥贏取 5 個皇冠即可開啟，獎勵豐厚！'
+    cardCount: 16,
+    goldMin: 1000,
+    goldMax: 2200,
+    gemsMin: 8,
+    gemsMax: 18,
+    guaranteedRare: 4,
+    guaranteedEpic: 1,
+    description: '皇家榮譽尊爵寶箱，保證獲得大量金幣與多張稀有與史詩卡牌！'
   },
   magical: {
     id: 'magical',
-    name: '神奇寶箱',
+    name: '神奇魔力寶箱',
     costType: 'gems',
-    cost: 80,
+    cost: 280,
     icon: '✨',
     color: '#c42eff',
-    cardCount: 12,
-    goldMin: 800,
-    goldMax: 1500,
-    gemsMin: 10,
-    gemsMax: 20,
-    guaranteedRare: 4,
-    guaranteedEpic: 2,
-    description: '蘊含強大奧術魔力的寶箱，必出多張稀有與史詩卡牌！'
+    cardCount: 28,
+    goldMin: 2200,
+    goldMax: 4500,
+    gemsMin: 15,
+    gemsMax: 30,
+    guaranteedRare: 8,
+    guaranteedEpic: 3,
+    description: '蘊含強大奧術魔力的寶箱，必出多張稀有與極品史詩卡牌！'
   },
   legendary: {
     id: 'legendary',
-    name: '傳奇超級寶箱',
+    name: '傳奇超級神箱',
     costType: 'gems',
-    cost: 200,
+    cost: 750,
     icon: '💎',
     color: '#00ffc4',
-    cardCount: 20,
-    goldMin: 2500,
-    goldMax: 5000,
-    gemsMin: 30,
-    gemsMax: 60,
-    guaranteedRare: 6,
-    guaranteedEpic: 4,
-    description: '皇家最高規格的尊貴寶箱，海量卡牌碎片與極品史詩/傳奇！'
+    cardCount: 45,
+    goldMin: 6000,
+    goldMax: 15000,
+    gemsMin: 50,
+    gemsMax: 100,
+    guaranteedRare: 14,
+    guaranteedEpic: 7,
+    guaranteedLegendary: 1,
+    description: '皇家最高規格的尊貴神箱，海量碎片並 100% 必出傳奇卡牌！'
   }
 };
 

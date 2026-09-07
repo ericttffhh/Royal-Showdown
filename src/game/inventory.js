@@ -398,6 +398,20 @@ export class InventoryManager {
     const cardRewards = [];
     let remainingCards = chest.cardCount;
 
+    if (chest.guaranteedLegendary > 0) {
+      const legendaries = cardPool.filter(id => CARDS[id]?.rarity === 'legendary');
+      if (legendaries.length > 0) {
+        for (let i = 0; i < Math.min(chest.guaranteedLegendary, remainingCards); i++) {
+          const randomCard = legendaries[Math.floor(Math.random() * legendaries.length)];
+          const count = 1;
+          if (!this.data.cards[randomCard]) this.data.cards[randomCard] = { level: 1, count: 0 };
+          this.data.cards[randomCard].count += count;
+          cardRewards.push({ cardId: randomCard, count, rarity: 'legendary' });
+          remainingCards -= count;
+        }
+      }
+    }
+
     if (chest.guaranteedEpic > 0) {
       const epics = cardPool.filter(id => CARDS[id]?.rarity === 'epic');
       for (let i = 0; i < Math.min(chest.guaranteedEpic, remainingCards); i++) {

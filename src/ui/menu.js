@@ -1591,53 +1591,279 @@ export class MenuUI {
   // 🎁 皇家寶箱商城與抽卡殿堂 UI
   // -------------------------------------------------------------
 
+  // -------------------------------------------------------------
+  // 🎁 皇家寶箱商城與每日特惠隨機市場
+  // -------------------------------------------------------------
+
+  initDailyShopSystem() {
+    if (this._shopTimerInterval) clearInterval(this._shopTimerInterval);
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const diffMs = tomorrow - now;
+      if (diffMs <= 0) {
+        this.getOrGenerateDailyDeals(true);
+        this.renderDailyDeals();
+        return;
+      }
+      const hrs = Math.floor(diffMs / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      const secs = Math.floor((diffMs % 60000) / 1000);
+      const cdEl = document.getElementById('shop-refresh-countdown');
+      if (cdEl) {
+        cdEl.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+    };
+
+    updateCountdown();
+    this._shopTimerInterval = setInterval(updateCountdown, 1000);
+
+    // 手動重骰刷新按鈕
+    const refreshBtn = document.getElementById('btn-manual-refresh-shop');
+    if (refreshBtn) {
+      refreshBtn.onclick = () => {
+        if (inventory.data.gems < 10) {
+          this.showAnnouncement('⚠️ 璀璨寶石不足 (重骰需要 10 💎)！');
+          return;
+        }
+        inventory.addGems(-10);
+        this.getOrGenerateDailyDeals(true);
+        this.renderDailyDeals();
+        sounds.playVictory();
+        this.updateCurrencyUI();
+        this.showAnnouncement('🔄 已花費 10 寶石成功隨機重骰特惠市場！');
+      };
+    }
+  }
+
+  getOrGenerateDailyDeals(forceRefresh = false) {
+    const storageKey = 'royal_daily_deals_v3';
+    const dateKey = 'royal_daily_deals_date_v3';
+    const today = new Date().toDateString();
+
+    if (!forceRefresh && localStorage.getItem(dateKey) === today) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey));
+        if (Array.isArray(saved) && saved.length >= 6) {
+          this.dailyDeals = saved;
+          return saved;
+        }
+      } catch (e) {
+        // ignore JSON parse error and regenerate
+      }
+    }
+
+    const allCardIds = Object.keys(CARDS);
+    const commons = allCardIds.filter(id => CARDS[id].rarity === 'common');
+    const rares = allCardIds.filter(id => CARDS[id].rarity === 'rare');
+    const epics = allCardIds.filter(id => CARDS[id].rarity === 'epic');
+    const legendaries = allCardIds.filter(id => CARDS[id].rarity === 'legendary');
+
+    const deals = [];
+
+    // Slot 0: 🎁 每日限時免費領取 (100% 免費)
+    const slot0CardId = Math.random() < 0.65 
+      ? commons[Math.floor(Math.random() * commons.length)] 
+      : rares[Math.floor(Math.random() * rares.length)];
+    const isRare0 = CARDS[slot0CardId].rarity === 'rare';
+    const slot0Count = isRare0 ? 6 : 25;
+    const slot0OrigPrice = isRare0 ? 400 : 250;
+    deals.push({
+      id: 'deal_slot_0',
+      cardId: slot0CardId,
+      count: slot0Count,
+      currency: 'gold',
+      originalPrice: slot0OrigPrice,
+      discountPrice: 0,
+      discountTag: '🎁 今日免費',
+      sold: false
+    });
+
+    // Slot 1: 普通/稀有卡牌 5折限時特惠 (-50%)
+    const slot1Pool = Math.random() < 0.6 ? commons : rares;
+    const slot1CardId = slot1Pool[Math.floor(Math.random() * slot1Pool.length)];
+    const isRare1 = CARDS[slot1CardId].rarity === 'rare';
+    const slot1Count = isRare1 ? 12 : 40;
+    const slot1Orig = isRare1 ? 800 : 400;
+    deals.push({
+      id: 'deal_slot_1',
+      cardId: slot1CardId,
+      count: slot1Count,
+      currency: 'gold',
+      originalPrice: slot1Orig,
+      discountPrice: Math.round(slot1Orig * 0.5),
+      discountTag: '🔥 限時 5 折',
+      sold: false
+    });
+
+    // Slot 2: 稀有/史詩卡牌 6折特惠 (-40%)
+    const slot2Pool = Math.random() < 0.65 ? rares : epics;
+    const slot2CardId = slot2Pool[Math.floor(Math.random() * slot2Pool.length)];
+    const isEpic2 = CARDS[slot2CardId].rarity === 'epic';
+    const slot2Count = isEpic2 ? 3 : 18;
+    const slot2Orig = isEpic2 ? 1800 : 1200;
+    deals.push({
+      id: 'deal_slot_2',
+      cardId: slot2CardId,
+      count: slot2Count,
+      currency: 'gold',
+      originalPrice: slot2Orig,
+      discountPrice: Math.round(slot2Orig * 0.6),
+      discountTag: '⚡ 超值 6 折',
+      sold: false
+    });
+
+    // Slot 3: 史詩精選 7折特惠 (-30%)
+    const slot3CardId = epics[Math.floor(Math.random() * epics.length)];
+    const slot3Count = Math.floor(Math.random() * 3) + 4; // 4~6
+    const slot3Orig = slot3Count * 600;
+    deals.push({
+      id: 'deal_slot_3',
+      cardId: slot3CardId,
+      count: slot3Count,
+      currency: 'gold',
+      originalPrice: slot3Orig,
+      discountPrice: Math.round(slot3Orig * 0.7),
+      discountTag: '🏷️ 史詩 7 折',
+      sold: false
+    });
+
+    // Slot 4: 史詩大量或傳奇 8折特惠
+    const isLeg4 = Math.random() < 0.4 && legendaries.length > 0;
+    const slot4CardId = isLeg4 
+      ? legendaries[Math.floor(Math.random() * legendaries.length)] 
+      : epics[Math.floor(Math.random() * epics.length)];
+    const slot4Count = isLeg4 ? 1 : 8;
+    const slot4Currency = isLeg4 ? 'gems' : 'gold';
+    const slot4Orig = isLeg4 ? 180 : 4800;
+    deals.push({
+      id: 'deal_slot_4',
+      cardId: slot4CardId,
+      count: slot4Count,
+      currency: slot4Currency,
+      originalPrice: slot4Orig,
+      discountPrice: Math.round(slot4Orig * 0.8),
+      discountTag: isLeg4 ? '💎 傳奇 8 折' : '✨ 狂歡 8 折',
+      sold: false
+    });
+
+    // Slot 5: 傳奇英雄神選 75折特惠 (-25%)
+    const slot5CardId = legendaries.length > 0 
+      ? legendaries[Math.floor(Math.random() * legendaries.length)] 
+      : epics[0];
+    const slot5Count = 1;
+    const slot5Orig = 250;
+    deals.push({
+      id: 'deal_slot_5',
+      cardId: slot5CardId,
+      count: slot5Count,
+      currency: 'gems',
+      originalPrice: slot5Orig,
+      discountPrice: 188,
+      discountTag: '👑 傳奇 75折',
+      sold: false
+    });
+
+    this.dailyDeals = deals;
+    localStorage.setItem(storageKey, JSON.stringify(deals));
+    localStorage.setItem(dateKey, today);
+    return deals;
+  }
+
+  saveDailyDeals() {
+    if (this.dailyDeals) {
+      localStorage.setItem('royal_daily_deals_v3', JSON.stringify(this.dailyDeals));
+    }
+  }
+
+  renderDailyDeals() {
+    const grid = document.getElementById('shop-daily-cards-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const deals = this.getOrGenerateDailyDeals();
+    deals.forEach((deal) => {
+      const card = CARDS[deal.cardId];
+      if (!card) return;
+
+      const item = document.createElement('div');
+      item.className = `shop-daily-card-item rarity-${card.rarity} ${deal.sold ? 'is-sold-out' : ''}`;
+
+      const priceText = deal.discountPrice === 0 
+        ? '<span class="price-free">🎁 免費領取</span>' 
+        : `<span class="price-currency">${deal.currency === 'gems' ? '💎' : '🪙'} ${deal.discountPrice.toLocaleString()}</span>`;
+
+      const origPriceText = deal.discountPrice === 0 
+        ? `<s>🪙 ${deal.originalPrice.toLocaleString()}</s>` 
+        : `<s>${deal.currency === 'gems' ? '💎' : '🪙'} ${deal.originalPrice.toLocaleString()}</s>`;
+
+      const rarityLabels = {
+        common: '普通',
+        rare: '稀有',
+        epic: '史詩',
+        legendary: '傳奇'
+      };
+
+      item.innerHTML = `
+        <div class="deal-discount-badge">${deal.discountTag}</div>
+        <div class="daily-card-icon-wrap">
+          <div class="daily-card-icon">${card.icon}</div>
+        </div>
+        <div class="daily-card-name">${card.name}</div>
+        <div class="daily-card-rarity-tag ${card.rarity}">${rarityLabels[card.rarity] || card.rarity}</div>
+        <div class="daily-card-count">x${deal.count} 張碎片</div>
+        <div class="deal-price-row">
+          <span class="deal-orig-price">${origPriceText}</span>
+          <span class="deal-curr-price">${priceText}</span>
+        </div>
+        <button class="daily-card-buy-btn ${deal.sold ? 'sold-out' : ''}" ${deal.sold ? 'disabled' : ''}>
+          ${deal.sold ? '✓ 已售罄' : (deal.discountPrice === 0 ? '🎁 免費領取' : '立即入手')}
+        </button>
+      `;
+
+      if (!deal.sold) {
+        item.querySelector('.daily-card-buy-btn')?.addEventListener('click', () => {
+          if (deal.discountPrice > 0) {
+            if (deal.currency === 'gems') {
+              if (inventory.data.gems < deal.discountPrice) {
+                this.showAnnouncement(`⚠️ 璀璨寶石不足 (需要 ${deal.discountPrice} 💎)！`);
+                return;
+              }
+              inventory.addGems(-deal.discountPrice);
+            } else {
+              if (inventory.data.gold < deal.discountPrice) {
+                this.showAnnouncement(`⚠️ 皇家金幣不足 (需要 ${deal.discountPrice} 🪙)！`);
+                return;
+              }
+              inventory.addGold(-deal.discountPrice);
+            }
+          }
+
+          inventory.addCardCount(deal.cardId, deal.count);
+          deal.sold = true;
+          this.saveDailyDeals();
+
+          sounds.playVictory();
+          confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+          this.showAnnouncement(`✨ 成功入手 ${card.name} 碎片 x${deal.count}！`);
+
+          this.updateCurrencyUI();
+          this.deckBuilder?.renderAll();
+          this.renderDailyDeals();
+        });
+      }
+
+      grid.appendChild(item);
+    });
+  }
+
   openShopModal() {
     this.hideAllModals();
     if (!this.shopModal) return;
 
-    // Render Daily Special Deals
-    const dailyGrid = document.getElementById('shop-daily-cards-grid');
-    if (dailyGrid) {
-      dailyGrid.innerHTML = '';
-      const dailyDeals = [
-        { cardId: 'knight', count: 20, priceGold: 300 },
-        { cardId: 'wizard', count: 10, priceGold: 600 },
-        { cardId: 'thunder_valkyrie', count: 5, priceGold: 1500 },
-        { cardId: 'cyber_ninja', count: 2, priceGold: 3000 }
-      ];
-
-      dailyDeals.forEach(deal => {
-        const card = CARDS[deal.cardId];
-        if (!card) return;
-
-        const item = document.createElement('div');
-        item.className = `shop-daily-card-item rarity-${card.rarity}`;
-        item.innerHTML = `
-          <div class="daily-card-icon">${card.icon}</div>
-          <div class="daily-card-name">${card.name}</div>
-          <div class="daily-card-count">x${deal.count} 張碎片</div>
-          <button class="daily-card-buy-btn" data-card="${deal.cardId}">
-            🪙 ${deal.priceGold} 金幣
-          </button>
-        `;
-
-        item.querySelector('.daily-card-buy-btn')?.addEventListener('click', () => {
-          if (inventory.data.gold < deal.priceGold) {
-            this.showAnnouncement('⚠️ 金幣不足，無法購買碎片！');
-            return;
-          }
-          inventory.addGold(-deal.priceGold);
-          inventory.addCardCount(deal.cardId, deal.count);
-          sounds.playVictory();
-          confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
-          this.showAnnouncement(`✨ 成功購買 ${card.name} 碎片 x${deal.count}！`);
-          this.updateCurrencyUI();
-          this.deckBuilder?.renderAll();
-        });
-
-        dailyGrid.appendChild(item);
-      });
-    }
+    this.initDailyShopSystem();
+    this.renderDailyDeals();
 
     // Bind Shop Chest Buttons
     document.querySelectorAll('.shop-buy-chest-btn').forEach(btn => {
@@ -1650,9 +1876,17 @@ export class MenuUI {
     // Daily Free Gems
     const freeGemsBtn = document.getElementById('btn-claim-free-daily-gems');
     if (freeGemsBtn) {
+      const lastClaimKey = 'royal_last_free_gems_date';
+      const today = new Date().toDateString();
+      if (localStorage.getItem(lastClaimKey) === today) {
+        freeGemsBtn.textContent = '今日已領取';
+        freeGemsBtn.disabled = true;
+      } else {
+        freeGemsBtn.textContent = '免費領取';
+        freeGemsBtn.disabled = false;
+      }
+
       freeGemsBtn.onclick = () => {
-        const lastClaimKey = 'royal_last_free_gems_date';
-        const today = new Date().toDateString();
         if (localStorage.getItem(lastClaimKey) === today) {
           this.showAnnouncement('⚠️ 今日免費寶石已領取，明日再來！');
           return;
@@ -1668,14 +1902,14 @@ export class MenuUI {
       };
     }
 
-    // Gold Exchange
+    // Gold Exchange (Gems -> Gold)
     document.querySelectorAll('.supply-buy-btn.buy-gold').forEach(btn => {
       btn.onclick = () => {
         const gemsReq = parseInt(btn.dataset.gems, 10);
         const goldGain = parseInt(btn.dataset.gold, 10);
 
         if (inventory.data.gems < gemsReq) {
-          this.showAnnouncement('⚠️ 璀璨寶石不足！');
+          this.showAnnouncement(`⚠️ 璀璨寶石不足 (需要 ${gemsReq} 💎)！`);
           return;
         }
 
@@ -1683,7 +1917,27 @@ export class MenuUI {
         inventory.addGold(goldGain);
         sounds.playVictory();
         confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
-        this.showAnnouncement(`🪙 成功兌換 +${goldGain} 金幣！`);
+        this.showAnnouncement(`🪙 成功兌換 +${goldGain.toLocaleString()} 金幣！`);
+        this.updateCurrencyUI();
+      };
+    });
+
+    // Gems Exchange (Gold -> Gems)
+    document.querySelectorAll('.supply-buy-btn.buy-gems').forEach(btn => {
+      btn.onclick = () => {
+        const goldReq = parseInt(btn.dataset.gold, 10);
+        const gemsGain = parseInt(btn.dataset.gems, 10);
+
+        if (inventory.data.gold < goldReq) {
+          this.showAnnouncement(`⚠️ 皇家金幣不足 (需要 ${goldReq.toLocaleString()} 🪙)！`);
+          return;
+        }
+
+        inventory.addGold(-goldReq);
+        inventory.addGems(gemsGain);
+        sounds.playVictory();
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+        this.showAnnouncement(`💎 成功兌換 +${gemsGain.toLocaleString()} 璀璨寶石！`);
         this.updateCurrencyUI();
       };
     });
