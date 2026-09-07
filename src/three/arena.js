@@ -63,9 +63,11 @@ export class Arena3D {
     this.brawlGroup.visible = false;
 
     const aspect = window.innerWidth / window.innerHeight;
-    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.5, 200);
-    this.camera.position.set(0, 26, 22);
-    this.camera.lookAt(0, 0, 1.5);
+    this.camera = new THREE.PerspectiveCamera(44, aspect, 0.5, 250);
+    this.camera.position.set(0, 32, 27);
+    this.camera.lookAt(0, 0, 0.5);
+
+    this.userZoom = 1.0;
 
     const maxDpr = this.isMobile ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(window.devicePixelRatio || 1, 2.0);
     this.renderer = new THREE.WebGLRenderer({
@@ -82,6 +84,16 @@ export class Arena3D {
     this.renderer.toneMappingExposure = 1.35;
 
     this.container.appendChild(this.renderer.domElement);
+
+    // 🖱️ 電腦版滑鼠滾輪自由縮放戰場視角 (Zoom In / Zoom Out)
+    this.container.addEventListener('wheel', (e) => {
+      if (e.target.closest('.modal-backdrop:not(.hidden)') || e.target.closest('.brawl-room-card') || e.target.closest('.dialog-card') || e.target.closest('.multi-test-card')) {
+        return;
+      }
+      e.preventDefault();
+      const zoomSpeed = 0.0015;
+      this.userZoom = Math.max(0.7, Math.min(1.45, this.userZoom + e.deltaY * zoomSpeed));
+    }, { passive: false });
   }
 
   triggerScreenShake(intensity = 0.6, duration = 0.35) {
@@ -661,13 +673,13 @@ export class Arena3D {
     this.cinematicTime = 0;
 
     if (mode === 'classic') {
-      this.targetCameraPos.set(0, 26, 22);
-      this.targetCameraLook.set(0, 0, 1.5);
+      this.targetCameraPos.set(0, 32, 27);
+      this.targetCameraLook.set(0, 0, 0.5);
     } else if (mode === 'king') {
-      this.targetCameraPos.set(0, 6.5, 14.0);
+      this.targetCameraPos.set(0, 7.5, 16.0);
       this.targetCameraLook.set(0, 2.0, -4.0);
     } else if (mode === 'topdown') {
-      this.targetCameraPos.set(0, 32, 0.5);
+      this.targetCameraPos.set(0, 42, 0.5);
       this.targetCameraLook.set(0, 0, 0);
     }
   }
@@ -1300,16 +1312,18 @@ export class Arena3D {
         }
       });
 
-      // 4-Player elevated panoramic camera for 36x36 colosseum
-      const isPortrait = window.innerWidth < window.innerHeight;
-      if (isPortrait) {
-        this.camera.fov = 52;
-        this.targetCameraPos.set(0, 52, 42);
-        this.targetCameraLook.set(0, -1, 0);
+      // 4-Player elevated panoramic camera for 36x36 colosseum (拉遠視角防遮擋)
+      const aspect = window.innerWidth / window.innerHeight;
+      if (aspect < 1.0) {
+        // 方形或小視窗 (如多開 460x470 或直屏)
+        this.camera.fov = 48;
+        this.targetCameraPos.set(0, 72, 58);
+        this.targetCameraLook.set(0, -1.5, 0);
       } else {
-        this.camera.fov = 45;
-        this.targetCameraPos.set(0, 42, 34);
-        this.targetCameraLook.set(0, -0.5, 0);
+        // 寬螢幕/電腦版
+        this.camera.fov = 44;
+        this.targetCameraPos.set(0, 56, 46);
+        this.targetCameraLook.set(0, -1.0, 0);
       }
       this.camera.updateProjectionMatrix();
     } else {
@@ -1328,9 +1342,16 @@ export class Arena3D {
       });
 
       if (this.cameraMode === 'classic') {
-        this.camera.fov = 45;
-        this.targetCameraPos.set(0, 26, 22);
-        this.targetCameraLook.set(0, 0, 1.5);
+        const aspect = window.innerWidth / window.innerHeight;
+        if (aspect < 1.0) {
+          this.camera.fov = Math.max(46, Math.min(58, 46 / (aspect * 1.15)));
+          this.targetCameraPos.set(0, 40, 34);
+          this.targetCameraLook.set(0, 0, 0);
+        } else {
+          this.camera.fov = 44;
+          this.targetCameraPos.set(0, 32, 27);
+          this.targetCameraLook.set(0, 0, 0.5);
+        }
         this.camera.updateProjectionMatrix();
       }
     }
@@ -1384,26 +1405,26 @@ export class Arena3D {
 
       if (this.isBrawlMode) {
         if (aspect < 1.0) {
-          this.camera.fov = 52;
-          this.targetCameraPos.set(0, 52, 42);
-          this.targetCameraLook.set(0, -1, 0);
+          this.camera.fov = 48;
+          this.targetCameraPos.set(0, 72, 58);
+          this.targetCameraLook.set(0, -1.5, 0);
         } else {
-          this.camera.fov = 45;
-          this.targetCameraPos.set(0, 42, 34);
-          this.targetCameraLook.set(0, -0.5, 0);
+          this.camera.fov = 44;
+          this.targetCameraPos.set(0, 56, 46);
+          this.targetCameraLook.set(0, -1.0, 0);
         }
       } else {
         if (aspect < 1.0) {
-          this.camera.fov = Math.max(48, Math.min(64, 48 / (aspect * 1.15)));
+          this.camera.fov = Math.max(46, Math.min(58, 46 / (aspect * 1.15)));
           if (this.cameraMode === 'classic') {
-            this.targetCameraPos.set(0, 30, 25);
+            this.targetCameraPos.set(0, 40, 34);
             this.targetCameraLook.set(0, 0, 0);
           }
         } else {
-          this.camera.fov = 45;
+          this.camera.fov = 44;
           if (this.cameraMode === 'classic') {
-            this.targetCameraPos.set(0, 26, 22);
-            this.targetCameraLook.set(0, 0, 1.5);
+            this.targetCameraPos.set(0, 32, 27);
+            this.targetCameraLook.set(0, 0, 0.5);
           }
         }
       }
@@ -1487,7 +1508,7 @@ export class Arena3D {
       this.blizzardParticles.geometry.attributes.position.needsUpdate = true;
     }
 
-    // 5. Camera Smooth Lerping
+    // 5. Camera Smooth Lerping with User Zoom support
     if (this.isCinematic && this.cinematicTarget) {
       this.cinematicTime += deltaTime;
       const camPos = this.cinematicTarget.clone().add(new THREE.Vector3(
@@ -1498,7 +1519,12 @@ export class Arena3D {
       this.camera.position.lerp(camPos, 0.08);
       this.currentLookAt.lerp(this.cinematicTarget, 0.08);
     } else {
-      this.camera.position.lerp(this.targetCameraPos, 0.08);
+      const effectiveTargetPos = this.targetCameraPos.clone();
+      if (this.userZoom && this.userZoom !== 1.0) {
+        const offset = new THREE.Vector3().subVectors(this.targetCameraPos, this.targetCameraLook).multiplyScalar(this.userZoom);
+        effectiveTargetPos.copy(this.targetCameraLook).add(offset);
+      }
+      this.camera.position.lerp(effectiveTargetPos, 0.08);
       this.currentLookAt.lerp(this.targetCameraLook, 0.08);
     }
 
