@@ -16,6 +16,8 @@ class ClashRoyaleApp {
   constructor() {
     this.mode = 'ai'; // 'ai' | '7x' | 'draft' | 'pve' | 'matchmaking' | 'online' | 'local'
     this.isOnlineGuest = false;
+    this.handledDeployIds = new Set();
+    this.deploySeq = 0;
 
     // 1. 初始化 3D 競技場與特效
     const canvasContainer = document.getElementById('canvas-container');
@@ -29,6 +31,22 @@ class ClashRoyaleApp {
       onTimeChange: (timeStr, rawTime) => this.updateTimerUI(timeStr, rawTime),
       onAnnouncement: (msg) => this.menuUI?.showAnnouncement(msg),
       onBrawlUpdate: (status) => this.menuUI?.updateBrawlHud(status),
+      onBrawlBotDeploy: (cardId, pos, team) => {
+        // 🌐 房主產出電腦 AI 出兵時，即時廣播給所有房間好友，杜絕資料不一致
+        if (this.mode === 'brawl' && this.network.isHost && this.network.getConnectedCount() > 0) {
+          const deployId = `bot_${team}_${Date.now()}_${++this.deploySeq}`;
+          this.handledDeployIds.add(deployId);
+          this.network.send({
+            type: 'brawl_deploy',
+            deployId,
+            cardId,
+            x: pos.x,
+            z: pos.z,
+            team,
+            senderId: 'host_bot'
+          });
+        }
+      },
       onGameOver: (result, scores) => {
         sounds.stopBGM();
         this.inBattle = false;
@@ -41,6 +59,13 @@ class ClashRoyaleApp {
             winner: result === 'win' ? 'host' : (result === 'loss' ? 'guest' : 'draw'),
             hostCrowns: scores.playerCrowns,
             guestCrowns: scores.enemyCrowns
+          });
+        } else if (this.mode === 'brawl' && this.network.isHost && this.network.getConnectedCount() > 0) {
+          this.network.send({
+            type: 'brawl_game_over',
+            result,
+            scores,
+            ranking: this.battle.getBrawlRanking()
           });
         }
 
@@ -300,7 +325,8 @@ class ClashRoyaleApp {
         if (this.brawlRoom.seats[s].isHuman) humanTeams.push(s);
       });
     }
-    if (!humanTeams.includes(mySide)) humanTeams.push(mySide);
+    const isMultiGuest = !this.network.isHost && this.network.getConnectedCount() > 0;
+    this.battle.isMultiplayerGuest = isMultiGuest;
 
     this.menuUI.enterBattleView('brawl');
     this.battle.setBattleMode('brawl', {
@@ -373,6 +399,7 @@ class ClashRoyaleApp {
     this.mode = 'online';
     this.inBattle = true;
     this.isOnlineGuest = !isHost;
+    this.battle.isMultiplayerGuest = !isHost;
 
     document.getElementById('room-modal').classList.add('hidden');
     this.menuUI.enterBattleView();
@@ -479,23 +506,57 @@ class ClashRoyaleApp {
         hazards: data.hazards
       });
     } else if (data.type === 'brawl_deploy') {
-      this.battle.deployCard(data.cardId, { x: data.x, z: data.z }, data.team);
+      // 1. 忽略自己已部署的封包
+      if (data.senderId && data.senderId === this.network.peer?.id) return;
+      // 2. 避免重複出兵
+      if (data.deployId && this.handledDeployIds.has(data.deployId)) return;
+      if (data.deployId) this.handledDeployIds.add(data.deployId);
+
+      this.battle.deployCard(data.cardId, { x: data.x, z: data.z }, data.team, true);
+
       if (this.network.isHost) {
-        // 房主群發給其他客端
+        // 房主轉發給其他客端
         this.network.send(data);
       }
     } else if (data.type === 'deploy') {
+      if (data.deployId && this.handledDeployIds.has(data.deployId)) return;
+      if (data.deployId) this.handledDeployIds.add(data.deployId);
+
       const invX = -data.x;
       const invZ = -data.z;
-      this.battle.deployCard(data.cardId, { x: invX, z: invZ }, false);
+      this.battle.deployCard(data.cardId, { x: invX, z: invZ }, false, true);
     } else if (data.type === 'sync_state') {
-      // 🌐 客端接收房主權威狀態校正訊框 (消除血量與爆塔不同步)
+      // 🌐 1v1 線上對戰客端接收房主權威狀態校正訊框 (10Hz Master Authority Sync)
       if (!this.network.isHost && this.inBattle) {
         this.battle.applyTowersState(data.towers, true);
         this.battle.playerCrowns = data.guestCrowns;
         this.battle.enemyCrowns = data.hostCrowns;
         this.updateCrownsUI(this.battle.playerCrowns, this.battle.enemyCrowns);
         this.battle.matchTime = data.time;
+        if (Array.isArray(data.troops)) {
+          this.battle.applyTroopsState(data.troops, true);
+        }
+      }
+    } else if (data.type === 'brawl_sync_state') {
+      // 🌐 四人混戰客端接收房主權威狀態校正訊框 (10Hz Master Authority Sync)
+      if (!this.network.isHost && this.inBattle) {
+        this.battle.matchTime = data.time;
+        if (Array.isArray(data.towers)) {
+          this.battle.applyTowersState(data.towers, false);
+        }
+        if (Array.isArray(data.eliminatedTeams)) {
+          this.battle.brawlEliminatedTeams = new Set(data.eliminatedTeams);
+        }
+        if (Array.isArray(data.troops)) {
+          this.battle.applyTroopsState(data.troops, false);
+        }
+        this.menuUI.updateBrawlHud(this.battle.getBrawlStatus());
+      }
+    } else if (data.type === 'brawl_game_over') {
+      if (!this.network.isHost && this.inBattle) {
+        sounds.stopBGM();
+        this.inBattle = false;
+        this.battle.forceEndMatch(data.result, data.scores);
       }
     } else if (data.type === 'game_over') {
       // 🌐 客端接收權威對局終結通知 (同秒同分結束遊戲)
@@ -548,22 +609,29 @@ class ClashRoyaleApp {
     const canDeploy = this.battle.canDeployAt(pos.x, pos.z, deploySide, isSpell);
     if (!canDeploy) return false;
 
-    const success = this.battle.deployCard(cardId, pos, deploySide);
+    const success = this.battle.deployCard(cardId, pos, deploySide, false);
     if (success) {
+      const deployId = `${this.network.peer?.id || 'local'}_${Date.now()}_${++this.deploySeq}`;
+      this.handledDeployIds.add(deployId);
+
       if (this.mode === 'online') {
         this.network.send({
           type: 'deploy',
+          deployId,
           cardId,
           x: pos.x,
-          z: pos.z
+          z: pos.z,
+          senderId: this.network.peer?.id
         });
       } else if (this.mode === 'brawl' && this.network.getConnectedCount() > 0) {
         this.network.send({
           type: 'brawl_deploy',
+          deployId,
           cardId,
           x: pos.x,
           z: pos.z,
-          team: deploySide
+          team: deploySide,
+          senderId: this.network.peer?.id
         });
       }
     }
@@ -652,19 +720,31 @@ class ClashRoyaleApp {
       }
 
       // 🌐 線上對戰房主每 100ms 廣播高頻狀態同步校正封包 (10Hz Master Authority Sync)
-      if (this.mode === 'online' && this.network.isHost) {
+      if (this.network.isHost) {
         this.lastHostSync = this.lastHostSync || 0;
         if (currentTime - this.lastHostSync > 100) {
           this.lastHostSync = currentTime;
-          this.network.send({
-            type: 'sync_state',
-            time: this.battle.matchTime,
-            towers: this.battle.getTowersState(),
-            hostCrowns: this.battle.playerCrowns,
-            guestCrowns: this.battle.enemyCrowns,
-            isOver: this.battle.isOver,
-            isSuddenDeath: this.battle.isSuddenDeath
-          });
+
+          if (this.mode === 'online') {
+            this.network.send({
+              type: 'sync_state',
+              time: this.battle.matchTime,
+              towers: this.battle.getTowersState(),
+              hostCrowns: this.battle.playerCrowns,
+              guestCrowns: this.battle.enemyCrowns,
+              isOver: this.battle.isOver,
+              isSuddenDeath: this.battle.isSuddenDeath,
+              troops: this.battle.getTroopsState(true)
+            });
+          } else if (this.mode === 'brawl' && this.network.getConnectedCount() > 0) {
+            this.network.send({
+              type: 'brawl_sync_state',
+              time: this.battle.matchTime,
+              towers: this.battle.getTowersState(),
+              eliminatedTeams: Array.from(this.battle.brawlEliminatedTeams),
+              troops: this.battle.getTroopsState(false)
+            });
+          }
         }
       }
     }

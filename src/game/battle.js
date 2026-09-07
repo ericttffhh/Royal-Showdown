@@ -38,6 +38,7 @@ export class BattleEngine {
     // 4-Player Brawl State
     this.brawlEliminatedTeams = new Set();
     this.brawlBotTimers = { red: 3.0, green: 4.5, purple: 6.0, blue: 3.0 };
+    this.isMultiplayerGuest = false; // 🌐 多人連線客端模式 (客端由房主權威同步)
 
     // 2v2 Coop State
     this.is2v2 = false;
@@ -220,7 +221,7 @@ export class BattleEngine {
     return false;
   }
 
-  deployCard(cardId, targetPos, isBlueOrTeam) {
+  deployCard(cardId, targetPos, isBlueOrTeam, isRemote = false) {
     const team = typeof isBlueOrTeam === 'string' ? isBlueOrTeam : (isBlueOrTeam ? 'blue' : 'red');
     const isPlayer = team === this.playerTeam;
     const cardLevel = isPlayer ? (inventory.data.cards[cardId]?.level || 1) : 3;
@@ -228,19 +229,20 @@ export class BattleEngine {
     if (!card) return false;
 
     const currentElixir = this.teamElixir[team] ?? (isPlayer ? this.playerElixir : this.enemyElixir);
-    if (currentElixir < card.cost) return false;
+    // 🌐 若為遠端連線同步過來的出兵請求，絕不可因微小聖水計時偏差而拒絕丟棄！
+    if (!isRemote && currentElixir < card.cost) return false;
 
     if (this.teamElixir[team] !== undefined) {
-      this.teamElixir[team] -= card.cost;
+      this.teamElixir[team] = Math.max(0, this.teamElixir[team] - card.cost);
     }
 
-    if (isPlayer) {
-      this.playerElixir -= card.cost;
+    if (isPlayer && !isRemote) {
+      this.playerElixir = Math.max(0, this.playerElixir - card.cost);
       this.callbacks.onElixirChange?.(this.playerElixir);
       inventory.progressQuest('deploy_troops', 1);
       this.triggerVibrate(15);
-    } else if (team === 'red' && this.battleMode !== 'brawl') {
-      this.enemyElixir -= card.cost;
+    } else if (team === 'red' && this.battleMode !== 'brawl' && !isRemote) {
+      this.enemyElixir = Math.max(0, this.enemyElixir - card.cost);
     }
 
     sounds.playDeploy();
@@ -441,7 +443,8 @@ spawnTroops(card, targetPos, isBlueOrTeam) {
       ragedTimer: 0,
       state: 'move',
       currentTarget: null,
-      animTime: Math.random() * 5
+      animTime: Math.random() * 5,
+      spawnAge: 0
     });
   });
 }
@@ -618,6 +621,8 @@ updateHazards(deltaTime) {
 
 updateBrawlBots(deltaTime) {
   if (this.battleMode !== 'brawl') return;
+  // 🌐 連線客端嚴禁自行運算 AI，全由房主統一決策並廣播，杜絕資料不一致！
+  if (this.isMultiplayerGuest) return;
 
   const allTeams = ['blue', 'red', 'green', 'purple'];
   const botCardPool = ['knight', 'archers', 'wizard', 'giant', 'goblins', 'cyber_ninja', 'thunder_valkyrie'];
@@ -638,7 +643,10 @@ updateBrawlBots(deltaTime) {
       else if (team === 'green') spawnPos = new THREE.Vector3(-11.5 - Math.random() * 3.5, 0, (Math.random() - 0.5) * 10);
       else if (team === 'purple') spawnPos = new THREE.Vector3(11.5 + Math.random() * 3.5, 0, (Math.random() - 0.5) * 10);
 
-      this.deployCard(randomCardId, spawnPos, team);
+      const success = this.deployCard(randomCardId, spawnPos, team);
+      if (success) {
+        this.callbacks.onBrawlBotDeploy?.(randomCardId, spawnPos, team);
+      }
     }
   });
 }
@@ -722,6 +730,7 @@ updateTroops(deltaTime) {
 
   for (let i = this.troops.length - 1; i >= 0; i--) {
     const troop = this.troops[i];
+    troop.spawnAge = (troop.spawnAge || 0) + deltaTime;
     if (troop.hp <= 0) {
       this.destroyTroop(i);
       continue;
@@ -1303,6 +1312,86 @@ getTowersState() {
     isBlue: t.isBlue,
     type: t.type
   }));
+}
+
+// 導出當前士兵狀態
+getTroopsState(invertCoords = false) {
+  return this.troops.map(t => ({
+    id: t.id,
+    cardId: t.cardId,
+    team: t.team,
+    isBlue: invertCoords ? !t.isBlue : t.isBlue,
+    x: Number((invertCoords ? -t.position.x : t.position.x).toFixed(2)),
+    z: Number((invertCoords ? -t.position.z : t.position.z).toFixed(2)),
+    hp: Math.round(t.hp),
+    maxHp: Math.round(t.maxHp)
+  }));
+}
+
+// 接收房主權威狀態並校正士兵 (消滅幽靈單位與位置漂移)
+applyTroopsState(remoteTroops, isGuest1v1 = false) {
+  if (!Array.isArray(remoteTroops)) return;
+
+  const remoteIds = new Set();
+
+  remoteTroops.forEach(remote => {
+    remoteIds.add(remote.id);
+    let local = this.troops.find(t => t.id === remote.id);
+
+    if (!local) {
+      local = this.troops.find(t =>
+        t.cardId === remote.cardId &&
+        (isGuest1v1 ? t.isBlue === remote.isBlue : t.team === remote.team) &&
+        Math.hypot(t.position.x - remote.x, t.position.z - remote.z) < 4.0
+      );
+      if (local) local.id = remote.id;
+    }
+
+    if (local) {
+      // 1. 權威血量同步 (防止傷害分歧)
+      if (remote.hp < local.hp) {
+        local.hp = remote.hp;
+      }
+
+      // 2. 平滑插值校正座標
+      const dx = remote.x - local.position.x;
+      const dz = remote.z - local.position.z;
+      const dist = Math.hypot(dx, dz);
+
+      if (dist > 3.2) {
+        local.position.x = remote.x;
+        local.position.z = remote.z;
+      } else if (dist > 0.25) {
+        local.position.x += dx * 0.35;
+        local.position.z += dz * 0.35;
+      }
+
+      if (local.mesh) {
+        local.mesh.position.x = local.position.x;
+        local.mesh.position.z = local.position.z;
+      }
+    }
+  });
+
+  // 3. 清理房主端已確認陣亡的幽靈部隊
+  for (let i = this.troops.length - 1; i >= 0; i--) {
+    const t = this.troops[i];
+    if (t.spawnAge && t.spawnAge > 1.2 && !remoteIds.has(t.id)) {
+      this.destroyTroop(i);
+    }
+  }
+}
+
+getBrawlRanking() {
+  const teams = ['blue', 'red', 'green', 'purple'];
+  return teams.map(tm => {
+    const king = this.towers.find(t => (t.team || (t.isBlue ? 'blue' : 'red')) === tm && t.type === 'king');
+    return {
+      team: tm,
+      hp: king ? Math.max(0, Math.round(king.hp)) : 0,
+      alive: king && king.hp > 0 && !this.brawlEliminatedTeams.has(tm)
+    };
+  }).sort((a, b) => b.hp - a.hp);
 }
 
 // 套用權威防禦塔狀態並校正
