@@ -1822,35 +1822,66 @@ export class MenuUI {
         </button>
       `;
 
-      if (!deal.sold) {
-        item.querySelector('.daily-card-buy-btn')?.addEventListener('click', () => {
+      const buyBtn = item.querySelector('.daily-card-buy-btn');
+      if (!deal.sold && buyBtn) {
+        const executeBuy = (e) => {
+          if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+
+          if (deal.sold) return;
+
+          // 扣款校驗
           if (deal.discountPrice > 0) {
             if (deal.currency === 'gems') {
-              if (inventory.data.gems < deal.discountPrice) {
+              if ((inventory.data.gems || 0) < deal.discountPrice) {
                 this.showAnnouncement(`⚠️ 璀璨寶石不足 (需要 ${deal.discountPrice} 💎)！`);
+                try { sounds.playTone(220, 150, 0.2, 'sawtooth'); } catch (err) {}
                 return;
               }
               inventory.addGems(-deal.discountPrice);
             } else {
-              if (inventory.data.gold < deal.discountPrice) {
+              if ((inventory.data.gold || 0) < deal.discountPrice) {
                 this.showAnnouncement(`⚠️ 皇家金幣不足 (需要 ${deal.discountPrice} 🪙)！`);
+                try { sounds.playTone(220, 150, 0.2, 'sawtooth'); } catch (err) {}
                 return;
               }
               inventory.addGold(-deal.discountPrice);
             }
           }
 
-          inventory.addCardCount(deal.cardId, deal.count);
+          // 增加卡牌碎片
+          if (typeof inventory.addCardCount === 'function') {
+            inventory.addCardCount(deal.cardId, deal.count);
+          } else {
+            if (!inventory.data.cards) inventory.data.cards = {};
+            if (!inventory.data.cards[deal.cardId]) {
+              inventory.data.cards[deal.cardId] = { level: 1, count: 0 };
+            }
+            inventory.data.cards[deal.cardId].count = (inventory.data.cards[deal.cardId].count || 0) + deal.count;
+            inventory.saveData();
+          }
+
           deal.sold = true;
           this.saveDailyDeals();
 
-          sounds.playVictory();
-          confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
-          this.showAnnouncement(`✨ 成功入手 ${card.name} 碎片 x${deal.count}！`);
+          try { sounds.playVictory(); } catch (err) {}
+          try { confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } }); } catch (err) {}
+
+          const freePrefix = deal.discountPrice === 0 ? '🎁 免費入手' : '✨ 成功購買';
+          this.showAnnouncement(`${freePrefix} ${card.name} 碎片 x${deal.count}！`);
 
           this.updateCurrencyUI();
-          this.deckBuilder?.renderAll();
+          try { this.deckBuilder?.renderAll?.(); } catch (err) {}
           this.renderDailyDeals();
+        };
+
+        buyBtn.addEventListener('click', executeBuy);
+        item.addEventListener('click', (e) => {
+          if (e.target !== buyBtn && !buyBtn.contains(e.target)) {
+            executeBuy(e);
+          }
         });
       }
 

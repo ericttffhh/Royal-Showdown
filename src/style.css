@@ -3699,6 +3699,8 @@ body, html {
   flex-direction: column;
   align-items: center;
   gap: 3px;
+  cursor: pointer;
+  user-select: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

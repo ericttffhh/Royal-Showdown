@@ -253,6 +253,17 @@ export class InventoryManager {
     return this.data;
   }
 
+  addCardCount(cardId, count = 1) {
+    if (!this.data.cards) this.data.cards = {};
+    if (!this.data.cards[cardId]) {
+      this.data.cards[cardId] = { level: 1, count: 0 };
+    }
+    this.data.cards[cardId].count = Math.max(0, (this.data.cards[cardId].count || 0) + count);
+    this.saveData();
+    this.syncWithServer();
+    return this.data.cards[cardId].count;
+  }
+
   addGold(amount) {
     this.data.gold = Math.max(0, this.data.gold + amount);
     this.saveData();
