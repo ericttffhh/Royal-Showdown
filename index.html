@@ -1250,7 +1250,29 @@
       </div>
 
       <!-- Tab 1: Server Nodes & Live Diagnostics -->
-      <div id="admin-tab-nodes" class="admin-tab-content active">
+        <div class="admin-section-title" style="margin-bottom: 8px;">
+          <span>👥 全球真實實時在線玩家名冊 (Live Active Players Roster)</span>
+          <span class="live-tag" id="admin-active-count-tag">1 位玩家在線</span>
+        </div>
+
+        <div class="admin-nodes-table-wrapper" style="margin-bottom: 20px;">
+          <table class="admin-nodes-table">
+            <thead>
+              <tr>
+                <th>玩家名稱</th>
+                <th>等級</th>
+                <th>天梯獎盃</th>
+                <th>當前狀態</th>
+                <th>裝置類型</th>
+                <th>連線心跳</th>
+              </tr>
+            </thead>
+            <tbody id="admin-players-tbody">
+              <!-- Dynamically populated real active players -->
+            </tbody>
+          </table>
+        </div>
+
         <div class="admin-section-title">
           <span>🌍 全球分佈式邊緣節點實時狀態 (Global Regional Nodes)</span>
           <button id="btn-run-ping-test" class="admin-action-btn">🚀 立即測試節點延遲 (Ping Test)</button>
