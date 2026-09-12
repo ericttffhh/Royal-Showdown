@@ -503,6 +503,21 @@ class SoundEngine {
     });
   }
 
+  playDefeat() {
+    if (!this.enabled) return;
+    const notes = [
+      { f: 440.0, d: 200 },
+      { f: 392.0, d: 200 },
+      { f: 349.23, d: 250 },
+      { f: 293.66, d: 500 }
+    ];
+    let time = 0;
+    notes.forEach(n => {
+      setTimeout(() => this.playTone(n.f, n.f * 0.95, n.d / 1000, 'sawtooth', 0.35), time);
+      time += n.d + 30;
+    });
+  }
+
   // --- 🎙️ 角色專屬語音咆哮與口頭禪 (Original Vocal & Voice Synthesizer) ---
   playVoice(cardId) {
     if (!this.enabled || !this.ctx) return;
