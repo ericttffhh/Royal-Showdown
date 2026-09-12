@@ -192,7 +192,8 @@ class ClashRoyaleApp {
       onTriggerKingPower: (powerId) => this.battle.triggerKingPower(powerId),
       onTriggerChampionAbility: () => this.battle.activateChampionAbility(),
       onThemeChanged: (themeId) => this.arena.setArenaTheme(themeId),
-      onToggleCamera: () => this.arena.cycleCameraMode()
+      onToggleCamera: () => this.arena.cycleCameraMode(),
+      arena: this.arena
     });
 
     // 啟動主選單大廳 BGM (在使用者首次點擊時自動解鎖 AudioContext)

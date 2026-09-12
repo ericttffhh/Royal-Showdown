@@ -5,6 +5,7 @@ import { auth, AVATAR_OPTIONS } from '../game/auth.js';
 import { sounds } from '../audio/sound.js';
 import { GachaManager } from './gacha.js';
 import { DeckBuilderUI } from './deckBuilder.js';
+import { BenchmarkUI } from './benchmark.js';
 import { presenceTracker } from '../game/cloud.js';
 
 /**
@@ -79,6 +80,7 @@ export class MenuUI {
     this.adminModal = document.getElementById('admin-dashboard-modal');
     this.multiTestModal = document.getElementById('multi-test-modal');
     this.brawlRoomModal = document.getElementById('brawl-room-modal');
+    this.benchmarkModal = document.getElementById('benchmark-modal');
     this.brawlTopBar = document.getElementById('brawl-top-bar');
     this.hazardBanner = document.getElementById('hazard-banner');
     this.hazardText = document.getElementById('hazard-text');
@@ -112,6 +114,10 @@ export class MenuUI {
     this.deckBuilder = new DeckBuilderUI(() => {
       this.updateCurrencyUI();
       this.callbacks.onDeckChanged?.();
+    });
+
+    this.benchmarkUI = new BenchmarkUI(this.callbacks.arena, (msg) => {
+      this.showAnnouncement(msg);
     });
 
     // 實時雲端同步推播即時刷新 UI
@@ -1476,6 +1482,7 @@ export class MenuUI {
     this.authModal?.classList.add('hidden');
     this.profileModal?.classList.add('hidden');
     this.multiTestModal?.classList.add('hidden');
+    this.benchmarkModal?.classList.add('hidden');
     document.getElementById('dungeon-modal')?.classList.add('hidden');
     document.getElementById('relic-pick-modal')?.classList.add('hidden');
     document.getElementById('tower-skins-modal')?.classList.add('hidden');

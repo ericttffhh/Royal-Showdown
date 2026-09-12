@@ -117,6 +117,11 @@
           <span class="badge-dot active"></span>
         </button>
 
+        <button id="btn-open-benchmark" class="playful-orb-btn gold-pulse" title="網頁端效能基準跑分 (WebGL 3D & 邏輯全壓測)">
+          <span class="orb-icon">🚀</span>
+          <span class="orb-label">效能跑分</span>
+        </button>
+
         <button id="btn-open-settings" class="playful-orb-btn small" title="設定與音量">
           <span class="orb-icon">⚙️</span>
         </button>
@@ -581,6 +586,73 @@
           <span class="settings-label">📱 手機流暢模式：</span>
           <button id="btn-toggle-perf-mode" class="toggle-switch-btn active">已啟用 (60 FPS)</button>
         </div>
+
+        <div class="settings-row" style="margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+          <span class="settings-label">🚀 網頁端效能評測：</span>
+          <button id="btn-settings-benchmark" class="action-btn primary small">啟動即時跑分 ⚡</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Web Performance Benchmark Modal -->
+  <div id="benchmark-modal" class="modal-backdrop hidden">
+    <div class="dialog-card large benchmark-modal-card">
+      <div class="deck-panel-header">
+        <div class="bm-header-title-box">
+          <span class="bm-header-icon">🚀</span>
+          <div>
+            <h2 class="dialog-title">網頁端全功能效能跑分基準 (Benchmark)</h2>
+            <p class="bm-header-sub">WebGL 3D GPU 實時渲染 · 150+ 單位戰鬥邏輯 · CPU 矩陣吞吐全壓測</p>
+          </div>
+        </div>
+        <button id="btn-close-benchmark" class="action-btn cancel small">關閉 ✕</button>
+      </div>
+
+      <!-- Device Hardware Specs Chip List -->
+      <div class="bm-device-bar" id="bm-device-info"></div>
+
+      <!-- Live Stress Canvas & Realtime FPS Gauge -->
+      <div class="bm-stress-stage" id="bm-stress-canvas-box">
+        <div class="bm-canvas-wrapper" id="bm-canvas-container">
+          <div class="bm-fps-overlay">
+            <span class="bm-fps-tag">即時渲染幀率</span>
+            <span class="bm-fps-num" id="bm-live-fps">60 FPS</span>
+          </div>
+        </div>
+        <div class="bm-stage-status">
+          <div class="bm-status-text-box">
+            <span id="bm-status-title" class="bm-status-title">🚀 準備就緒，點擊下方開始全效能基準壓測</span>
+            <span id="bm-progress-pct" class="bm-progress-pct">0%</span>
+          </div>
+          <div class="bm-progress-track">
+            <div id="bm-progress-bar" class="bm-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmark Results Card (Score, Grade, Metrics Grid) -->
+      <div class="bm-results-card hidden" id="bm-results-card">
+        <div class="bm-score-hero">
+          <div class="bm-score-left">
+            <span class="bm-score-title">🏆 綜合效能評分</span>
+            <div class="bm-score-number" id="bm-total-score">9850</div>
+          </div>
+          <div class="bm-score-right">
+            <div class="bm-grade-badge" id="bm-grade-badge">👑 S+ (巔峰頂級性能)</div>
+            <p class="bm-recommend-text" id="bm-recommend-text">✨ 您的設備性能極其強悍！推薦開啟「最高畫質 (Full 3D FX) + 60 FPS 滿血模式」。</p>
+          </div>
+        </div>
+
+        <!-- 4 Detailed Diagnostic Metrics Cards -->
+        <div class="bm-metrics-grid" id="bm-metrics-grid"></div>
+      </div>
+
+      <!-- Action Footer Buttons -->
+      <div class="bm-footer-actions">
+        <button id="btn-start-benchmark" class="action-btn primary large glow-btn">🚀 立即開始跑分 (Run Test)</button>
+        <button id="btn-apply-bm-optimization" class="action-btn success large">⚡ 一鍵套用最佳化設定</button>
+        <button id="btn-copy-benchmark-report" class="action-btn secondary small">📋 複製跑分報告</button>
       </div>
     </div>
   </div>
