@@ -53,8 +53,8 @@ export class InventoryManager {
     });
 
     return {
-      gold: 2000,
-      gems: 300,
+      gold: 800,
+      gems: 150,
       crowns: 0,
       trophies: 1000,
       deck: [...DEFAULT_DECK],

@@ -129,8 +129,9 @@ export class DeckBarUI {
         // 選中該卡牌
         this.selectedCardId = cardId;
         this.selectedCardIndex = index;
-        this.isDragging = true;
+        this.dragStartPos = { x: clientX, y: clientY };
         this.draggedCardId = cardId;
+        this.isDragging = false;
         this.lastCardSelectTime = now;
 
         sounds.playTone(680, 45, 0.1, 'sine');
@@ -178,7 +179,8 @@ export class DeckBarUI {
       const id = el.dataset.cardId;
       const card = CARDS[id];
       if (card) {
-        if (elixir >= card.cost) {
+        const isAffordable = this.currentElixir >= card.cost;
+        if (isAffordable) {
           el.classList.remove('disabled');
         } else {
           el.classList.add('disabled');
@@ -194,10 +196,10 @@ export class DeckBarUI {
       return;
     }
 
-    if (clientX !== undefined && clientY !== undefined) {
-      const intersection = this.arena.getArenaIntersection(clientX, clientY);
-      if (intersection) {
-        const card = CARDS[activeCardId];
+    const intersection = this.arena.getArenaIntersection(clientX, clientY);
+    if (intersection) {
+      const card = CARDS[activeCardId];
+      if (card) {
         const isSpell = card?.type === 'spell';
         const isBlueSide = intersection.z >= -0.5;
         const isValid = this.canDeployCheck
@@ -249,6 +251,7 @@ export class DeckBarUI {
         this.selectedCardIndex = null;
         this.draggedCardId = null;
         this.isDragging = false;
+        this.dragStartPos = null;
         this.arena.setDeploymentVisual(false);
         this.renderHand();
         return true;
@@ -262,6 +265,12 @@ export class DeckBarUI {
 
     // 1. 移動追蹤 (Pointer & Touch)
     const onMove = (clientX, clientY) => {
+      if (this.draggedCardId && this.dragStartPos) {
+        const dist = Math.hypot(clientX - this.dragStartPos.x, clientY - this.dragStartPos.y);
+        if (dist > 12) {
+          this.isDragging = true;
+        }
+      }
       if (this.selectedCardId || this.isDragging) {
         this.updatePlacementPreview(clientX, clientY);
       }
@@ -275,17 +284,29 @@ export class DeckBarUI {
     }, { passive: true });
 
     // 2. 點擊 / 按下部署 (Tap-to-Deploy 即點即放)
+    let lastDeployTapTime = 0;
     const onArenaPress = (clientX, clientY, target) => {
       if (!this.selectedCardId) return;
+      const now = Date.now();
+      if (now - lastDeployTapTime < 60) return; // Debounce rapid multi-touch
+
       if (target && (target.closest('.battle-dock') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)'))) {
         return;
       }
+      lastDeployTapTime = now;
       this.tryDeployAtCoordinates(clientX, clientY);
     };
 
     window.addEventListener('pointerdown', (e) => {
-      if (this.selectedCardId && !this.isDragging) {
+      if (this.selectedCardId) {
         onArenaPress(e.clientX, e.clientY, e.target);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchstart', (e) => {
+      if (this.selectedCardId && e.touches && e.touches.length > 0) {
+        const t = e.touches[0];
+        onArenaPress(t.clientX, t.clientY, t.target || e.target);
       }
     }, { passive: true });
 
@@ -296,11 +317,12 @@ export class DeckBarUI {
         if (!isOverDock) {
           this.tryDeployAtCoordinates(clientX, clientY);
         }
-        this.isDragging = false;
-        this.draggedCardId = null;
-        if (!this.selectedCardId) {
-          this.arena.setDeploymentVisual(false);
-        }
+      }
+      this.isDragging = false;
+      this.draggedCardId = null;
+      this.dragStartPos = null;
+      if (!this.selectedCardId) {
+        this.arena.setDeploymentVisual(false);
       }
     };
 

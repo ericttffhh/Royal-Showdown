@@ -2372,9 +2372,10 @@ export class MenuUI {
     this.announcementText.textContent = text;
     this.announcementBanner.classList.remove('hidden');
 
-    setTimeout(() => {
+    if (this._announcementTimer) clearTimeout(this._announcementTimer);
+    this._announcementTimer = setTimeout(() => {
       this.announcementBanner.classList.add('hidden');
-    }, 2600);
+    }, 2200);
   }
 
   showGameOver(result, scores) {
@@ -2392,7 +2393,7 @@ export class MenuUI {
     if (result === 'win') {
       titleEl.textContent = '皇室大捷！';
       subEl.textContent = '你已完全擊潰敵方皇家防線！';
-      inventory.addGold(150);
+      inventory.addGold(60);
       inventory.addTrophies(30);
       inventory.addCrowns(scores.playerCrowns);
       inventory.progressQuest('win_matches', 1);
@@ -2409,13 +2410,13 @@ export class MenuUI {
     } else if (result === 'loss') {
       titleEl.textContent = '戰鬥失利！';
       subEl.textContent = '國王塔被摧毀，總結經驗再接再厲！';
-      inventory.addGold(40);
+      inventory.addGold(15);
       inventory.addCrowns(scores.playerCrowns);
       expGained = 35;
     } else {
       titleEl.textContent = '平局對決！';
       subEl.textContent = '雙方勢均力敵，未分勝負！';
-      inventory.addGold(70);
+      inventory.addGold(30);
       inventory.addCrowns(scores.playerCrowns);
       expGained = 60;
     }

@@ -1650,36 +1650,45 @@ body, html {
   border: 1px solid rgba(100, 160, 255, 0.3);
 }
 
-/* Announcement Banner */
+/* Announcement Banner - Sleek Top Pill (Does not block battlefield) */
 .announcement-banner {
-  position: absolute;
-  top: 35%;
+  position: fixed;
+  top: max(68px, calc(env(safe-area-inset-top) + 60px));
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(90deg, rgba(255, 28, 174, 0) 0%, rgba(255, 28, 174, 0.9) 25%, rgba(193, 55, 255, 0.9) 75%, rgba(193, 55, 255, 0) 100%);
-  padding: 16px 40px;
-  pointer-events: none;
-  animation: banner-pop 2.5s forwards ease-out;
+  transform: translateX(-50%);
+  max-width: 90vw;
+  width: auto;
+  background: rgba(18, 12, 34, 0.92);
+  border: 1.5px solid rgba(236, 72, 153, 0.7);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(236, 72, 153, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 6px 18px;
+  border-radius: 999px;
+  pointer-events: none !important;
+  z-index: 120;
+  animation: banner-slide-fade 2.2s forwards cubic-bezier(0.16, 1, 0.3, 1);
   text-align: center;
 }
 
-.announcement-banner.hidden { display: none; }
+.announcement-banner.hidden { display: none !important; }
 
 .announcement-content {
   font-family: var(--font-title);
-  font-size: 30px;
-  font-weight: 900;
+  font-size: 13.5px;
+  font-weight: 800;
   color: #ffffff;
-  text-shadow: 0 0 16px rgba(255, 255, 255, 0.9), 0 4px 8px rgba(0, 0, 0, 0.8);
-  letter-spacing: 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.5px;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
-@keyframes banner-pop {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
-  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-  25% { transform: translate(-50%, -50%) scale(1); }
-  80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -80%) scale(0.9); }
+@keyframes banner-slide-fade {
+  0% { opacity: 0; transform: translate(-50%, -10px) scale(0.92); }
+  12% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -6px) scale(0.96); }
 }
 
 /* =========================================================
@@ -6273,39 +6282,38 @@ body, html {
    ========================================================= */
 .champion-ability-btn {
   position: absolute;
-  top: -56px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(100% + 8px);
+  right: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: linear-gradient(135deg, #ffd700 0%, #ff8800 50%, #b85d00 100%);
   border: 2px solid #fff3a8;
-  border-radius: 28px;
-  padding: 6px 16px;
+  border-radius: 20px;
+  padding: 4px 12px;
   cursor: pointer;
   z-index: 45;
-  box-shadow: 0 6px 20px rgba(255, 180, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.6);
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 14px rgba(255, 180, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   animation: champ-btn-pulse 1.8s infinite alternate ease-in-out;
 }
 
 @keyframes champ-btn-pulse {
-  0% { transform: translateX(-50%) scale(1); box-shadow: 0 6px 20px rgba(255, 180, 0, 0.5); }
-  100% { transform: translateX(-50%) scale(1.06); box-shadow: 0 10px 30px rgba(255, 220, 0, 0.9), 0 0 15px #ffd700; }
+  0% { transform: scale(1); box-shadow: 0 4px 14px rgba(255, 180, 0, 0.4); }
+  100% { transform: scale(1.05); box-shadow: 0 8px 22px rgba(255, 220, 0, 0.8), 0 0 10px #ffd700; }
 }
 
 .champion-ability-btn:hover {
-  transform: translateX(-50%) scale(1.12);
+  transform: scale(1.08);
   filter: brightness(1.15);
 }
 
 .champion-ability-btn:active {
-  transform: translateX(-50%) scale(0.95);
+  transform: scale(0.95);
 }
 
 .champ-icon-box {
-  font-size: 24px;
+  font-size: 20px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
   animation: spin-subtle 4s infinite linear;
 }
