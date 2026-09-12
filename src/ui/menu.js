@@ -2865,7 +2865,7 @@ export class MenuUI {
         return;
       }
       inventory.data.gems -= 50;
-      inventory.save();
+      inventory.saveData();
       this.updateCurrencyUI();
     } else {
       localStorage.setItem('royal_last_lucky_spin_date', today);
@@ -3134,14 +3134,16 @@ export class MenuUI {
 
       const card = document.createElement('div');
       card.className = `skin-item-card ${isEquipped ? 'equipped' : ''}`;
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
 
       let btnHtml = '';
       if (isEquipped) {
-        btnHtml = `<button class="skin-action-btn equipped">✅ 已裝備</button>`;
+        btnHtml = `<button class="skin-action-btn equipped" type="button">✅ 已裝備</button>`;
       } else if (isOwned) {
-        btnHtml = `<button class="skin-action-btn equip" data-skin="${skin.id}">立即裝備</button>`;
+        btnHtml = `<button class="skin-action-btn equip" data-skin="${skin.id}" type="button">立即裝備</button>`;
       } else {
-        btnHtml = `<button class="skin-action-btn unlock" data-skin="${skin.id}">💎 ${skin.costGems} 解鎖</button>`;
+        btnHtml = `<button class="skin-action-btn unlock" data-skin="${skin.id}" type="button">💎 ${skin.costGems} 解鎖</button>`;
       }
 
       card.innerHTML = `
@@ -3151,28 +3153,38 @@ export class MenuUI {
         ${btnHtml}
       `;
 
-      card.querySelector('.skin-action-btn.equip')?.addEventListener('click', () => {
-        if (!inventory.data.selectedTowerSkin) inventory.data.selectedTowerSkin = 'classic';
-        inventory.data.selectedTowerSkin = skin.id;
-        inventory.save();
-        sounds.playTone(650, 950, 0.1, 'triangle');
-        this.renderTowerSkins();
-      });
+      const performAction = () => {
+        if (isEquipped) return;
 
-      card.querySelector('.skin-action-btn.unlock')?.addEventListener('click', () => {
-        if (inventory.data.gems < skin.costGems) {
-          this.showAnnouncement(`💎 寶石不足！需要 ${skin.costGems} 寶石`);
-          return;
+        if (isOwned) {
+          if (!inventory.data.selectedTowerSkin) inventory.data.selectedTowerSkin = 'classic';
+          inventory.data.selectedTowerSkin = skin.id;
+          inventory.saveData();
+          this.selectedTowerSkin = skin.id;
+          sounds.playTone(650, 950, 0.1, 'triangle');
+          this.renderTowerSkins();
+        } else {
+          if ((inventory.data.gems || 0) < skin.costGems) {
+            this.showAnnouncement(`💎 寶石不足！需要 ${skin.costGems} 寶石`);
+            return;
+          }
+          inventory.data.gems -= skin.costGems;
+          if (!inventory.data.ownedTowerSkins) inventory.data.ownedTowerSkins = ['classic'];
+          if (!inventory.data.ownedTowerSkins.includes(skin.id)) {
+            inventory.data.ownedTowerSkins.push(skin.id);
+          }
+          inventory.data.selectedTowerSkin = skin.id;
+          inventory.saveData();
+          this.selectedTowerSkin = skin.id;
+          sounds.playUpgradeSound();
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          this.updateCurrencyUI();
+          this.renderTowerSkins();
         }
-        inventory.data.gems -= skin.costGems;
-        if (!inventory.data.ownedTowerSkins) inventory.data.ownedTowerSkins = ['classic'];
-        inventory.data.ownedTowerSkins.push(skin.id);
-        inventory.data.selectedTowerSkin = skin.id;
-        inventory.save();
-        sounds.playUpgradeSound();
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        this.updateCurrencyUI();
-        this.renderTowerSkins();
+      };
+
+      card.addEventListener('click', (e) => {
+        performAction();
       });
 
       grid.appendChild(card);
@@ -3190,22 +3202,30 @@ export class MenuUI {
       const isEquipped = currentTheme === theme.id;
       const card = document.createElement('div');
       card.className = `arena-item-card ${isEquipped ? 'equipped' : ''}`;
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
 
       card.innerHTML = `
         <div class="arena-icon-box">${theme.icon}</div>
         <div class="arena-name">${theme.name}</div>
         <div class="arena-desc">${theme.description}</div>
-        <button class="arena-action-btn ${isEquipped ? 'equipped' : 'equip'}" data-theme="${theme.id}">
+        <button class="arena-action-btn ${isEquipped ? 'equipped' : 'equip'}" data-theme="${theme.id}" type="button">
           ${isEquipped ? '✅ 使用中' : '更換主題'}
         </button>
       `;
 
-      card.querySelector('.arena-action-btn.equip')?.addEventListener('click', () => {
+      const performAction = () => {
+        if (isEquipped) return;
         inventory.data.selectedArenaTheme = theme.id;
-        inventory.save();
+        inventory.saveData();
+        this.selectedArenaTheme = theme.id;
         sounds.playTone(523, 783, 0.12, 'sine');
         this.renderArenaThemes();
         this.callbacks.onThemeChanged?.(theme.id);
+      };
+
+      card.addEventListener('click', (e) => {
+        performAction();
       });
 
       grid.appendChild(card);

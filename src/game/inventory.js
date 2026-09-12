@@ -77,6 +77,11 @@ export class InventoryManager {
       // 🎖️ 成就系統狀態
       achievementsProgress: {},
       claimedAchievements: [],
+      // 🏰 防禦塔造型與 3D 競技場主題
+      selectedTowerSkin: 'classic',
+      ownedTowerSkins: ['classic'],
+      selectedArenaTheme: 'royal_valley',
+      ownedArenaThemes: ['royal_valley', 'lava_chasm', 'frozen_peak'],
       // 📊 全局遊戲後台統計與對局場次
       stats: {
         totalMatches: 0,
@@ -133,6 +138,11 @@ export class InventoryManager {
         if (!parsed.claimedDailyRewards) parsed.claimedDailyRewards = [];
         if (!parsed.achievementsProgress) parsed.achievementsProgress = {};
         if (!parsed.claimedAchievements) parsed.claimedAchievements = [];
+
+        if (!parsed.ownedTowerSkins) parsed.ownedTowerSkins = ['classic'];
+        if (!parsed.selectedTowerSkin) parsed.selectedTowerSkin = 'classic';
+        if (!parsed.selectedArenaTheme) parsed.selectedArenaTheme = 'royal_valley';
+        if (!parsed.ownedArenaThemes) parsed.ownedArenaThemes = ['royal_valley', 'lava_chasm', 'frozen_peak'];
 
         if (!parsed.stats) {
           parsed.stats = {
@@ -218,6 +228,10 @@ export class InventoryManager {
     higherBase.claimedPassGold = Array.from(new Set([...(higherBase.claimedPassGold || []), ...(other.claimedPassGold || [])]));
 
     return higherBase;
+  }
+
+  save(skipCloud = false) {
+    return this.saveData(skipCloud);
   }
 
   saveData(skipCloud = false) {

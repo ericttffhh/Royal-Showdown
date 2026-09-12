@@ -85,6 +85,10 @@ export class DeckBuilderUI {
       const canUpgrade = inventory.canUpgrade(cardId);
 
       const cardEl = document.createElement('div');
+      cardEl.className = `collection-card-item ${inDeck ? 'in-deck' : ''} rarity-${card.rarity}`;
+      cardEl.setAttribute('role', 'button');
+      cardEl.setAttribute('tabindex', '0');
+
       const rawCount = (typeof cardData.count === 'number' && Number.isFinite(cardData.count)) ? Math.floor(cardData.count) : 0;
       const cleanCount = Math.min(9999, Math.max(0, rawCount));
       const progressPct = upgradeReq ? Math.min(100, (cleanCount / upgradeReq.cardsNeeded) * 100) : 100;
@@ -132,7 +136,7 @@ export class DeckBuilderUI {
   handleUpgrade(cardId) {
     const result = inventory.upgradeCard(cardId);
     if (result) {
-      sounds.playVictory();
+      sounds.playUpgradeSound?.() || sounds.playVictory();
       confetti({
         particleCount: 50,
         spread: 60,
