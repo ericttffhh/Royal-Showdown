@@ -1476,6 +1476,12 @@ export class MenuUI {
     this.authModal?.classList.add('hidden');
     this.profileModal?.classList.add('hidden');
     this.multiTestModal?.classList.add('hidden');
+    document.getElementById('dungeon-modal')?.classList.add('hidden');
+    document.getElementById('relic-pick-modal')?.classList.add('hidden');
+    document.getElementById('tower-skins-modal')?.classList.add('hidden');
+    document.getElementById('admin-dashboard-modal')?.classList.add('hidden');
+    document.getElementById('brawl-room-modal')?.classList.add('hidden');
+    document.getElementById('lucky-wheel-modal')?.classList.add('hidden');
   }
 
   // -------------------------------------------------------------
