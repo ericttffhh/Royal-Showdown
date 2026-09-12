@@ -33,6 +33,7 @@ export class MenuUI {
     this.renderAvatarPicker();
     this.populateCardsWiki();
     this.updateCurrencyUI();
+    this.initLuckyWheel();
     window.gameMenu = this;
   }
 
@@ -493,15 +494,17 @@ export class MenuUI {
       });
     });
 
-    // Main Navigation Tabs
+    // Main Navigation Tabs (5 Playful Tabs)
     const navBattle = document.getElementById('nav-btn-battle');
     const navDeck = document.getElementById('nav-btn-deck');
     const navShop = document.getElementById('nav-btn-shop');
+    const navTrophy = document.getElementById('nav-btn-trophy');
     const navWiki = document.getElementById('nav-btn-wiki');
 
     const setNavActive = (activeBtn) => {
-      [navBattle, navDeck, navShop, navWiki].forEach(btn => btn?.classList.remove('active'));
+      [navBattle, navDeck, navShop, navTrophy, navWiki].forEach(btn => btn?.classList.remove('active'));
       activeBtn?.classList.add('active');
+      sounds.playTone(600, 40, 0.08, 'sine');
     };
 
     navBattle?.addEventListener('click', () => {
@@ -521,6 +524,12 @@ export class MenuUI {
       setNavActive(navShop);
       this.hideAllModals();
       this.openShopModal();
+    });
+
+    navTrophy?.addEventListener('click', () => {
+      setNavActive(navTrophy);
+      this.hideAllModals();
+      this.openTrophyRoad();
     });
 
     document.getElementById('btn-open-gold-shop')?.addEventListener('click', () => {
@@ -553,12 +562,29 @@ export class MenuUI {
       setNavActive(navBattle);
     });
 
-    // Lobby Chest Gacha Buttons
-    document.querySelectorAll('.lobby-chest-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const chestId = btn.dataset.chest;
-        this.gachaManager.startOpening(chestId);
+    // 4-Slot Interactive Chest Pedestals
+    document.querySelectorAll('.pedestal-unlock-btn, .chest-pedestal-card').forEach(elem => {
+      elem.addEventListener('click', (e) => {
+        const chestId = elem.dataset.chest || elem.closest('.chest-pedestal-card')?.dataset.chest;
+        if (chestId && this.gachaManager) {
+          sounds.playTone(520, 80, 0.15, 'sine');
+          this.gachaManager.startOpening(chestId);
+        }
       });
+    });
+
+    // 🎡 Lucky Spin Wheel Listeners
+    document.getElementById('btn-open-lucky-wheel')?.addEventListener('click', () => {
+      this.openLuckyWheel();
+    });
+    document.getElementById('btn-close-lucky-wheel')?.addEventListener('click', () => {
+      this.closeLuckyWheel();
+    });
+    document.getElementById('btn-spin-wheel')?.addEventListener('click', () => {
+      this.spinLuckyWheel();
+    });
+    document.getElementById('btn-spin-wheel-center')?.addEventListener('click', () => {
+      this.spinLuckyWheel();
     });
 
     // Quick Ranked Matchmaking Hero Button
@@ -2712,5 +2738,175 @@ export class MenuUI {
       this.showAnnouncement('🧹 本地快取清理完成，網路節點連線已重新優化！');
     }
   }
+
+  // -------------------------------------------------------------
+  // 🎡 每日幸運大轉盤 (LUCKY SPIN WHEEL)
+  // -------------------------------------------------------------
+
+  initLuckyWheel() {
+    this.luckyModal = document.getElementById('lucky-wheel-modal');
+    this.wheelDisc = document.getElementById('lucky-wheel-disc');
+    this.wheelCanvas = document.getElementById('lucky-wheel-canvas');
+    this.isSpinningWheel = false;
+    this.wheelRotation = 0;
+
+    this.wheelPrizes = [
+      { type: 'gold', val: 1000, label: '1,000 🪙', color: '#f59e0b', text: '#ffffff', icon: '🪙' },
+      { type: 'gems', val: 50, label: '50 💎', color: '#06b6d4', text: '#ffffff', icon: '💎' },
+      { type: 'chest', val: 'silver', label: '白銀寶箱', color: '#64748b', text: '#ffffff', icon: '📦' },
+      { type: 'gold', val: 2500, label: '2,500 🪙', color: '#d97706', text: '#ffffff', icon: '🪙' },
+      { type: 'gems', val: 120, label: '120 💎', color: '#3b82f6', text: '#ffffff', icon: '💎' },
+      { type: 'chest', val: 'magical', label: '神奇寶箱', color: '#a855f7', text: '#ffffff', icon: '✨' },
+      { type: 'gold', val: 5000, label: '5,000 🪙', color: '#eab308', text: '#3b1700', icon: '🪙' },
+      { type: 'chest', val: 'legendary', label: '傳奇神箱', color: '#ec4899', text: '#ffffff', icon: '💎' }
+    ];
+
+    this.drawLuckyWheel();
+  }
+
+  drawLuckyWheel() {
+    if (!this.wheelCanvas) return;
+    const ctx = this.wheelCanvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = this.wheelCanvas.width;
+    const height = this.wheelCanvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = width / 2 - 4;
+    const numSegments = this.wheelPrizes.length;
+    const arcSize = (2 * Math.PI) / numSegments;
+
+    ctx.clearRect(0, 0, width, height);
+
+    this.wheelPrizes.forEach((p, idx) => {
+      const angle = idx * arcSize;
+      
+      // Draw slice
+      ctx.beginPath();
+      ctx.fillStyle = p.color;
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw slice border
+      ctx.strokeStyle = '#ffffff33';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw Label & Icon
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(angle + arcSize / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = p.text || '#ffffff';
+      ctx.font = 'bold 13px "Noto Sans TC", sans-serif';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(`${p.icon} ${p.label}`, radius - 20, 5);
+      ctx.restore();
+    });
+  }
+
+  openLuckyWheel() {
+    if (!this.luckyModal) return;
+    this.luckyModal.classList.remove('hidden');
+    sounds.playTone(580, 80, 0.15, 'sine');
+
+    // 檢查今天是否已抽獎
+    const lastSpinDate = localStorage.getItem('royal_last_lucky_spin_date');
+    const today = new Date().toISOString().slice(0, 10);
+    const statusText = document.getElementById('wheel-status-text');
+    const btn = document.getElementById('btn-spin-wheel');
+
+    if (lastSpinDate === today) {
+      if (statusText) statusText.textContent = '今日免費次數已用完 · 明日 00:00 重置';
+      if (btn) btn.innerHTML = '<span>💎 50 寶石 再轉一次</span>';
+    } else {
+      if (statusText) statusText.textContent = '今日免費次數：1 / 1 (免費)';
+      if (btn) btn.innerHTML = '<span>🎰 立即旋轉 (每日免費 1 次)</span>';
+    }
+  }
+
+  closeLuckyWheel() {
+    if (this.isSpinningWheel) return;
+    if (this.luckyModal) {
+      this.luckyModal.classList.add('hidden');
+    }
+  }
+
+  spinLuckyWheel() {
+    if (this.isSpinningWheel) return;
+
+    const lastSpinDate = localStorage.getItem('royal_last_lucky_spin_date');
+    const today = new Date().toISOString().slice(0, 10);
+    const isFree = lastSpinDate !== today;
+
+    if (!isFree) {
+      if ((inventory.data.gems || 0) < 50) {
+        this.showAnnouncement('⚠️ 寶石不足 50 💎！可從商城獲取更多寶石！');
+        return;
+      }
+      inventory.data.gems -= 50;
+      inventory.save();
+      this.updateCurrencyUI();
+    } else {
+      localStorage.setItem('royal_last_lucky_spin_date', today);
+    }
+
+    this.isSpinningWheel = true;
+    sounds.playTone(400, 100, 0.2, 'triangle');
+
+    // 隨機抽選獎勵 (0 到 7)
+    const prizeIndex = Math.floor(Math.random() * this.wheelPrizes.length);
+    const targetPrize = this.wheelPrizes[prizeIndex];
+    const segmentAngle = 360 / this.wheelPrizes.length;
+
+    // 指針在頂部 (90度或270度視角校正)
+    // 計算旋轉度數：額外多轉 5-7 圈 (1800 - 2520度)
+    const extraSpins = (5 + Math.floor(Math.random() * 3)) * 360;
+    const targetAngle = 360 - (prizeIndex * segmentAngle + segmentAngle / 2) + 270;
+    const totalRotation = this.wheelRotation + extraSpins + (targetAngle % 360);
+    this.wheelRotation = totalRotation;
+
+    if (this.wheelDisc) {
+      this.wheelDisc.style.transition = 'transform 4.5s cubic-bezier(0.12, 0.8, 0.25, 1)';
+      this.wheelDisc.style.transform = `rotate(${totalRotation}deg)`;
+    }
+
+    // 旋轉途中連續滴答音效
+    const tickTimer = setInterval(() => {
+      sounds.playTone(700, 20, 0.05, 'sine');
+    }, 180);
+
+    setTimeout(() => {
+      clearInterval(tickTimer);
+      this.isSpinningWheel = false;
+
+      // 發放獎勵
+      if (targetPrize.type === 'gold') {
+        inventory.addGold(targetPrize.val);
+        sounds.playVictory();
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        this.showAnnouncement(`🎉 恭喜幸運獲得：${targetPrize.label}！`);
+      } else if (targetPrize.type === 'gems') {
+        inventory.addGems(targetPrize.val);
+        sounds.playVictory();
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        this.showAnnouncement(`💎 恭喜幸運獲得：${targetPrize.label}！`);
+      } else if (targetPrize.type === 'chest') {
+        this.closeLuckyWheel();
+        if (this.gachaManager) {
+          this.gachaManager.startOpening(targetPrize.val, true);
+        }
+        return;
+      }
+
+      this.updateCurrencyUI();
+      this.openLuckyWheel();
+    }, 4600);
+  }
 }
+
 

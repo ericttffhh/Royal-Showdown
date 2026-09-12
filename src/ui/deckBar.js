@@ -1,5 +1,6 @@
 import { CARDS } from '../game/cards.js';
 import { inventory } from '../game/inventory.js';
+import { sounds } from '../audio/sound.js';
 
 /**
  * 出戰牌組與聖水槽 HUD 管理器 (支援玩家自訂 8 張卡組、拖曳出兵與秒速點擊雙模式)
@@ -79,14 +80,14 @@ export class DeckBarUI {
       // 1. 點擊選取卡牌 (Tap-to-Select)
       cardDiv.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
-        this.selectCard(cardId);
+        this.selectCard(cardId, cardDiv);
         this.isDragging = true;
         this.draggedCardId = cardId;
       });
 
       cardDiv.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.selectCard(cardId);
+        this.selectCard(cardId, cardDiv);
       });
 
       this.cardsHandEl.appendChild(cardDiv);
@@ -105,12 +106,24 @@ export class DeckBarUI {
     `;
   }
 
-  selectCard(cardId) {
+  selectCard(cardId, cardDiv = null) {
+    const card = CARDS[cardId];
+    if (card && this.currentElixir < card.cost) {
+      // 聖水不足：Q彈搖晃震動提示
+      sounds.playTone(200, 60, 0.12, 'sawtooth');
+      if (cardDiv) {
+        cardDiv.classList.add('wobble-shake');
+        setTimeout(() => cardDiv.classList.remove('wobble-shake'), 400);
+      }
+      return;
+    }
+
     if (this.selectedCardId === cardId && !this.isDragging) {
       this.selectedCardId = null;
       this.arena.setDeploymentVisual(false);
     } else {
       this.selectedCardId = cardId;
+      sounds.playTone(680, 45, 0.1, 'sine');
       try {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           navigator.vibrate(12);

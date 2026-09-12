@@ -67,154 +67,227 @@
 
   <!-- Main Menu / Battle Lobby -->
   <div id="menu-overlay" class="modal-backdrop">
-    <div class="menu-card main-hub">
-      <div class="royal-crest">⚔️</div>
-      <h1 class="game-title">皇室對決 <span>3D</span></h1>
-      <p class="game-subtitle">CLASH ROYALE 3D ULTIMATE TACTICS</p>
+    <div class="menu-card main-hub playful-arcade-hub">
+      <!-- Playful Top Floating Activity Bar -->
+      <div class="lobby-floating-dock">
+        <button id="btn-open-lucky-wheel" class="playful-orb-btn rainbow-pulse" title="每日幸運大轉盤 · 免費抽金幣寶石">
+          <span class="orb-icon">🎡</span>
+          <span class="orb-label">幸運轉盤</span>
+          <span class="orb-glow-ring"></span>
+          <span class="badge-free">FREE</span>
+        </button>
 
-      <!-- Quick Action Badges (Quests, Royale Pass, 7-Day Rewards, Achievements, Settings, Replays) -->
-      <div class="lobby-quick-tools">
-        <button id="btn-open-pass" class="quick-tool-btn featured-gold">
-          <span>👑 皇室戰令</span>
+        <button id="btn-open-pass" class="playful-orb-btn gold-pulse" title="皇室尊爵戰令">
+          <span class="orb-icon">👑</span>
+          <span class="orb-label">皇室戰令</span>
           <span class="badge-dot active"></span>
         </button>
-        <button id="btn-open-7day" class="quick-tool-btn featured-purple">
-          <span>🎁 七日簽到</span>
+
+        <button id="btn-open-7day" class="playful-orb-btn purple-pulse" title="七日簽到狂歡">
+          <span class="orb-icon shake-infinite">🎁</span>
+          <span class="orb-label">七日簽到</span>
           <span class="badge-dot active"></span>
         </button>
-        <button id="btn-open-quests" class="quick-tool-btn">
-          <span>📜 每日任務</span>
+
+        <button id="btn-open-quests" class="playful-orb-btn" title="每日任務卷軸">
+          <span class="orb-icon">📜</span>
+          <span class="orb-label">每日任務</span>
           <span class="badge-dot" id="quest-alert-dot"></span>
         </button>
-        <button id="btn-open-achievements" class="quick-tool-btn">
-          <span>🎖️ 榮譽成就</span>
+
+        <button id="btn-open-multi-test" class="playful-orb-btn cyan-pulse" title="8帳號全功能實況測試中心">
+          <span class="orb-icon">🧪</span>
+          <span class="orb-label">8帳號測試</span>
         </button>
-        <button id="btn-open-settings" class="quick-tool-btn">
-          <span>⚙️ 音量設定</span>
-        </button>
-        <button id="btn-open-replays" class="quick-tool-btn">
-          <span>🎬 對戰記錄</span>
-        </button>
-        <button id="btn-open-multi-test" class="quick-tool-btn featured-cyan pulse-glow" title="8帳號全功能實況測試中心">
-          <span>🧪 8帳號實況測試</span>
+
+        <button id="btn-open-admin-dashboard" class="playful-orb-btn purple-pulse" title="營運後台 · 真實實時在線人數與伺服器日誌">
+          <span class="orb-icon">📊</span>
+          <span class="orb-label">營運後台</span>
           <span class="badge-dot active"></span>
         </button>
-        <button id="btn-open-admin-dashboard" class="quick-tool-btn featured-purple" title="遊戲後台、實時在線人數、伺服器歷史與對局統計">
-          <span>📊 遊戲後台</span>
-          <span class="badge-dot active"></span>
+
+        <button id="btn-open-settings" class="playful-orb-btn small" title="設定與音量">
+          <span class="orb-icon">⚙️</span>
         </button>
       </div>
 
-      <!-- Quick Match Highlight Button -->
-      <button id="btn-quick-match" class="quick-match-hero-btn">
-        <div class="hero-radar-pulse"></div>
-        <span class="hero-btn-icon">⚡</span>
-        <div class="hero-btn-text">
-          <span class="hero-btn-title">實時天梯快速匹配</span>
-          <span class="hero-btn-sub">智能秒速配對全球實力相近玩家</span>
+      <!-- Playful Animated Title Header -->
+      <div class="playful-title-header">
+        <div class="title-crest-box">
+          <span class="animated-crown">👑</span>
+          <span class="animated-swords">⚔️</span>
         </div>
-        <span class="hero-btn-arrow">⚔️</span>
-      </button>
+        <h1 class="game-title arcade-3d-text">皇室對決 <span class="badge-3d-tag">3D</span></h1>
+        <p class="game-subtitle-tag">★ CLASH ROYALE 3D · 終極街機狂潮 ★</p>
+      </div>
 
-      <!-- Main Action Modes Grid -->
-      <div class="menu-modes-grid">
-        <button id="btn-mode-brawl" class="royal-btn brawl-mode pulse-gold">
-          <span class="btn-icon">💥</span>
-          <div class="btn-text-group">
-            <span class="btn-title">四人混戰大亂鬥 (4-Way Brawl)</span>
-            <span class="btn-desc">好友房間/自選邊站 · 不足智慧補AI · 四方爭霸</span>
+      <!-- Center Stage: Giant 3D BATTLE Hero Button & Active Mode Banner -->
+      <div class="hero-battle-centerpiece">
+        <div class="current-mode-ribbon" id="current-mode-ribbon">
+          <span class="ribbon-icon" id="ribbon-mode-icon">⚡</span>
+          <div class="ribbon-text-box">
+            <span class="ribbon-mode-title" id="ribbon-mode-title">實時天梯快速匹配 (1v1)</span>
+            <span class="ribbon-mode-desc" id="ribbon-mode-desc">秒速配對全球實力相近玩家 · 爭奪天梯獎盃</span>
           </div>
-        </button>
+          <span class="ribbon-change-hint">點選下方切換模式 ▾</span>
+        </div>
 
-        <button id="btn-mode-2v2" class="royal-btn coop-mode">
-          <span class="btn-icon">🛡️</span>
-          <div class="btn-text-group">
-            <span class="btn-title">雙人合作防守 (2v2 Coop)</span>
-            <span class="btn-desc">與皇家守護 AI 盟友並肩作戰 · 守護雙城堡</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-ai" class="royal-btn primary pulse">
-          <span class="btn-icon">🤖</span>
-          <div class="btn-text-group">
-            <span class="btn-title">經典人機 (VS AI)</span>
-            <span class="btn-desc">單人挑戰智慧電腦 · 3 種難度</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-boss" class="royal-btn boss-mode">
-          <span class="btn-icon">🦾</span>
-          <div class="btn-text-group">
-            <span class="btn-title">泰坦首領討伐 (Boss Rush)</span>
-            <span class="btn-desc">迎戰 5000HP 狂暴泰坦魔像 & 地震衝擊</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-7x" class="royal-btn rage-mode">
-          <span class="btn-icon">⚡</span>
-          <div class="btn-text-group">
-            <span class="btn-title">7X 無限狂暴聖水</span>
-            <span class="btn-desc">7倍極速充能 · 滿屏大軍狂轟</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-draft" class="royal-btn draft-mode">
-          <span class="btn-icon">🎲</span>
-          <div class="btn-text-group">
-            <span class="btn-title">輪選選卡大挑戰</span>
-            <span class="btn-desc">4輪 2選1 · 隨機陣容博弈</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-pve" class="royal-btn pve-mode">
-          <span class="btn-icon">🛡️</span>
-          <div class="btn-text-group">
-            <span class="btn-title">PVE 無盡波次防禦</span>
-            <span class="btn-desc">迎戰20波怪獸大軍 & 泰坦Boss</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-online" class="royal-btn secondary">
-          <span class="btn-icon">🌐</span>
-          <div class="btn-text-group">
-            <span class="btn-title">好友自建房 (P2P)</span>
-            <span class="btn-desc">自定義房間代碼 · 好友連線</span>
-          </div>
-        </button>
-
-        <button id="btn-mode-local" class="royal-btn tertiary">
-          <span class="btn-icon">👥</span>
-          <div class="btn-text-group">
-            <span class="btn-title">本地雙人同屏 (1v1)</span>
-            <span class="btn-desc">同台設備雙向輪流部署</span>
+        <button id="btn-quick-match" class="super-chunky-battle-btn">
+          <div class="btn-shine-sweep"></div>
+          <div class="btn-particle-sparkles"></div>
+          <div class="battle-btn-inner">
+            <span class="battle-btn-swords">⚔️</span>
+            <div class="battle-btn-text-box">
+              <span class="battle-btn-main-text">立即開戰！</span>
+              <span class="battle-btn-sub-text">BATTLE START</span>
+            </div>
+            <span class="battle-btn-flame">🔥</span>
           </div>
         </button>
       </div>
 
-      <!-- Quick Chest Gacha Bar -->
-      <div class="lobby-chest-dock">
-        <div class="chest-dock-title">🎁 每日皇家寶箱抽卡</div>
-        <div class="lobby-chest-items">
-          <button class="lobby-chest-btn" data-chest="silver">
-            <span class="chest-emoji">📦</span>
-            <span class="chest-name">白銀寶箱</span>
-            <span class="chest-price">400 🪙</span>
-          </button>
-          <button class="lobby-chest-btn featured" data-chest="crown">
-            <span class="chest-emoji">👑</span>
-            <span class="chest-name">皇冠尊爵寶箱</span>
-            <span class="chest-price">1,500 🪙</span>
-          </button>
-          <button class="lobby-chest-btn magic" data-chest="magical">
-            <span class="chest-emoji">✨</span>
-            <span class="chest-name">神奇魔力寶箱</span>
-            <span class="chest-price">280 💎</span>
-          </button>
-          <button class="lobby-chest-btn legendary" data-chest="legendary">
-            <span class="chest-emoji">💎</span>
-            <span class="chest-name">傳奇超級神箱</span>
-            <span class="chest-price">750 💎</span>
-          </button>
+      <!-- Playful Illustrated Game Mode Showcase Grid -->
+      <div class="menu-modes-showcase-title">
+        <span>🎮 選擇遊玩模式 (SELECT GAME MODE)</span>
+        <span class="showcase-counter">8 大模式已就緒</span>
+      </div>
+
+      <div class="menu-modes-grid playful-grid">
+        <!-- 1. 四人大亂鬥 -->
+        <button id="btn-mode-brawl" class="playful-mode-card brawl-theme">
+          <span class="mode-badge hot-tag">HOT 🔥</span>
+          <div class="card-character-icon">💥</div>
+          <div class="card-info-box">
+            <strong class="card-title">四人混戰大亂鬥</strong>
+            <p class="card-desc">羅馬競技場 · 四方爭霸 · 智慧補AI</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 2. 7X 狂暴狂歡 -->
+        <button id="btn-mode-7x" class="playful-mode-card rage-theme">
+          <span class="mode-badge speed-tag">極速 ⚡</span>
+          <div class="card-character-icon">🔥</div>
+          <div class="card-info-box">
+            <strong class="card-title">7X 無限狂暴聖水</strong>
+            <p class="card-desc">7倍超速充能 · 滿屏大軍狂轟炸裂</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 3. 經典人機對決 -->
+        <button id="btn-mode-ai" class="playful-mode-card ai-theme">
+          <span class="mode-badge practice-tag">練手 🤖</span>
+          <div class="card-character-icon">🤖</div>
+          <div class="card-info-box">
+            <strong class="card-title">經典人機對戰</strong>
+            <p class="card-desc">單人智慧電腦 · 3 種難度自由挑戰</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 4. 泰坦首領討伐 -->
+        <button id="btn-mode-boss" class="playful-mode-card boss-theme">
+          <span class="mode-badge boss-tag">巨獸 🦾</span>
+          <div class="card-character-icon">🦾</div>
+          <div class="card-info-box">
+            <strong class="card-title">泰坦首領討伐戰</strong>
+            <p class="card-desc">迎戰 5000HP 狂暴泰坦魔像與地震</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 5. 輪選選卡挑戰 -->
+        <button id="btn-mode-draft" class="playful-mode-card draft-theme">
+          <span class="mode-badge tactic-tag">博弈 🎲</span>
+          <div class="card-character-icon">🎲</div>
+          <div class="card-info-box">
+            <strong class="card-title">輪選選卡大挑戰</strong>
+            <p class="card-desc">4輪 2選1 · 考驗隨機卡牌戰術</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 6. PVE 無盡防禦 -->
+        <button id="btn-mode-pve" class="playful-mode-card pve-theme">
+          <span class="mode-badge defense-tag">無盡 🏰</span>
+          <div class="card-character-icon">🛡️</div>
+          <div class="card-info-box">
+            <strong class="card-title">PVE 無盡波次防禦</strong>
+            <p class="card-desc">抵抗20波怪獸狂潮 · 守護皇家主堡</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 7. 雙人合作 2v2 -->
+        <button id="btn-mode-2v2" class="playful-mode-card coop-theme">
+          <span class="mode-badge team-tag">合作 👥</span>
+          <div class="card-character-icon">🛡️</div>
+          <div class="card-info-box">
+            <strong class="card-title">雙人合作守護 (2v2)</strong>
+            <p class="card-desc">與皇家守護 AI 盟友並肩作戰</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+
+        <!-- 8. 好友自建房 / 本地同屏 -->
+        <button id="btn-mode-online" class="playful-mode-card online-theme">
+          <span class="mode-badge room-tag">連線 🌐</span>
+          <div class="card-character-icon">📡</div>
+          <div class="card-info-box">
+            <strong class="card-title">好友自建房間 (P2P)</strong>
+            <p class="card-desc">自定義專屬房碼 · 零延遲對戰</p>
+          </div>
+          <span class="card-arrow-indicator">➔</span>
+        </button>
+      </div>
+
+      <!-- Classic 4-Slot Interactive Chest Altar -->
+      <div class="lobby-chest-chamber">
+        <div class="chamber-header">
+          <span class="chamber-title">🎁 皇家寶箱祭壇 (CHEST PEDESTALS)</span>
+          <span class="chamber-sub">點擊寶箱立即解鎖抽取稀有卡牌</span>
+        </div>
+        <div class="chest-pedestals-grid">
+          <!-- Slot 1: 白銀寶箱 -->
+          <div class="chest-pedestal-card" data-chest="silver">
+            <div class="pedestal-halo silver"></div>
+            <div class="pedestal-chest-box bounce-hover">
+              <span class="pedestal-emoji">📦</span>
+            </div>
+            <span class="pedestal-name">白銀寶箱</span>
+            <button class="pedestal-unlock-btn" data-chest="silver">400 🪙 開箱</button>
+          </div>
+
+          <!-- Slot 2: 皇冠尊爵寶箱 -->
+          <div class="chest-pedestal-card featured" data-chest="crown">
+            <div class="pedestal-halo gold"></div>
+            <div class="pedestal-chest-box bounce-hover">
+              <span class="pedestal-emoji">👑</span>
+            </div>
+            <span class="pedestal-name">皇冠尊爵箱</span>
+            <button class="pedestal-unlock-btn gold" data-chest="crown">1,500 🪙 開箱</button>
+          </div>
+
+          <!-- Slot 3: 神奇魔力寶箱 -->
+          <div class="chest-pedestal-card magic" data-chest="magical">
+            <div class="pedestal-halo purple"></div>
+            <div class="pedestal-chest-box bounce-hover">
+              <span class="pedestal-emoji">✨</span>
+            </div>
+            <span class="pedestal-name">神奇魔力箱</span>
+            <button class="pedestal-unlock-btn purple" data-chest="magical">280 💎 開箱</button>
+          </div>
+
+          <!-- Slot 4: 傳奇超級神箱 -->
+          <div class="chest-pedestal-card legendary" data-chest="legendary">
+            <div class="pedestal-halo rainbow"></div>
+            <div class="pedestal-chest-box bounce-hover">
+              <span class="pedestal-emoji">💎</span>
+            </div>
+            <span class="pedestal-name">傳奇超級神箱</span>
+            <button class="pedestal-unlock-btn rainbow" data-chest="legendary">750 💎 開箱</button>
+          </div>
         </div>
       </div>
     </div>
@@ -720,25 +793,62 @@
     </div>
   </div>
 
-  <!-- Bottom Navigation Tabs -->
-  <nav id="main-nav-bar" class="main-bottom-nav">
-    <button class="nav-tab-btn active" id="nav-btn-battle">
-      <span class="nav-icon">⚔️</span>
-      <span class="nav-label">戰鬥大廳</span>
+  <!-- Bottom Navigation Tabs (5 Playful Tabs) -->
+  <nav id="main-nav-bar" class="main-bottom-nav playful-bottom-nav">
+    <button class="nav-tab-btn" id="nav-btn-shop">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">皇家商城</span>
     </button>
     <button class="nav-tab-btn" id="nav-btn-deck">
       <span class="nav-icon">🎴</span>
-      <span class="nav-label">牌組構築</span>
+      <span class="nav-label">戰鬥牌組</span>
     </button>
-    <button class="nav-tab-btn" id="nav-btn-shop">
-      <span class="nav-icon">🎁</span>
-      <span class="nav-label">寶箱抽卡</span>
+    <button class="nav-tab-btn active center-hero-tab" id="nav-btn-battle">
+      <div class="nav-hero-badge">
+        <span class="nav-icon">⚔️</span>
+      </div>
+      <span class="nav-label">立即開戰</span>
+    </button>
+    <button class="nav-tab-btn" id="nav-btn-trophy">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">獎盃之路</span>
     </button>
     <button class="nav-tab-btn" id="nav-btn-wiki">
       <span class="nav-icon">📜</span>
       <span class="nav-label">兵團圖鑑</span>
     </button>
   </nav>
+
+  <!-- 🎡 Playful Lucky Spin Wheel Modal -->
+  <div id="lucky-wheel-modal" class="modal-backdrop hidden">
+    <div class="dialog-card medium lucky-wheel-card">
+      <div class="lucky-wheel-header">
+        <div class="lucky-title-badge">🎡 每日幸運輪盤 · 皇家大抽獎</div>
+        <button id="btn-close-lucky-wheel" class="modal-close-btn">&times;</button>
+      </div>
+      <p class="lucky-subtitle">轉動幸運大轉盤，贏取海量金幣、珍貴寶石與傳奇神級寶箱！</p>
+
+      <div class="wheel-stage-container">
+        <div class="wheel-outer-lights"></div>
+        <div class="wheel-pointer-needle">▼</div>
+        <div class="lucky-wheel-disc" id="lucky-wheel-disc">
+          <!-- 8 Segments dynamically drawn on Canvas or SVG -->
+          <canvas id="lucky-wheel-canvas" width="320" height="320"></canvas>
+        </div>
+        <div class="wheel-center-cap" id="btn-spin-wheel-center">
+          <span>SPIN</span>
+          <small>抽獎</small>
+        </div>
+      </div>
+
+      <div class="wheel-actions-box">
+        <button id="btn-spin-wheel" class="action-btn featured-gold super-chunky-btn">
+          <span>🎰 立即旋轉 (每日免費 1 次)</span>
+        </button>
+        <span class="wheel-remaining-text" id="wheel-status-text">今日免費次數：1 / 1</span>
+      </div>
+    </div>
+  </div>
 
   <!-- 3D Chest Gacha Modal -->
   <div id="gacha-modal" class="modal-backdrop gacha-backdrop hidden">
@@ -883,13 +993,19 @@
       </div>
 
       <div class="deck-main-container">
-        <div class="elixir-container">
-          <div class="elixir-icon-badge">
-            <span class="elixir-drop">💧</span>
-            <span class="elixir-num" id="elixir-text">5</span>
+        <!-- Playful Bubbling Liquid Elixir Flask -->
+        <div class="elixir-container bubbling-elixir-flask">
+          <div class="elixir-icon-badge comic-badge pulse-fast">
+            <span class="elixir-drop bounce-drop">💧</span>
+            <span class="elixir-num comic-3d-font" id="elixir-text">5</span>
           </div>
-          <div class="elixir-track">
-            <div class="elixir-fill" id="elixir-fill" style="width: 50%;"></div>
+          <div class="elixir-track flask-track">
+            <div class="elixir-fill flask-liquid" id="elixir-fill" style="width: 50%;">
+              <div class="liquid-wave"></div>
+              <div class="liquid-bubbles">
+                <span class="b1"></span><span class="b2"></span><span class="b3"></span>
+              </div>
+            </div>
             <div class="elixir-dividers">
               <span></span><span></span><span></span><span></span><span></span>
               <span></span><span></span><span></span><span></span>
