@@ -1375,23 +1375,39 @@ export class Arena3D {
   }
 
   getArenaIntersection(clientX, clientY) {
+    if (!this.container || !this.camera) return null;
     const rect = this.container.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+
     this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const activeGround = this.isBrawlMode ? (this.brawlGroundPlane || this.groundPlane) : (this.classicGroundPlane || this.groundPlane);
-    if (!activeGround) return null;
+    const boundX = this.isBrawlMode ? 17.5 : 8.5;
+    const boundZ = this.isBrawlMode ? 17.5 : 15.5;
 
-    const intersects = this.raycaster.intersectObject(activeGround);
-    if (intersects.length > 0) {
-      const boundX = this.isBrawlMode ? 17.5 : 8.5;
-      const boundZ = this.isBrawlMode ? 17.5 : 15.5;
+    // 1. 優先嘗試與實際 3D 地面網格求交點
+    const activeGround = this.isBrawlMode ? (this.brawlGroundPlane || this.groundPlane) : (this.classicGroundPlane || this.groundPlane);
+    if (activeGround) {
+      const intersects = this.raycaster.intersectObject(activeGround);
+      if (intersects.length > 0) {
+        return {
+          x: Math.max(-boundX, Math.min(boundX, intersects[0].point.x)),
+          z: Math.max(-boundZ, Math.min(boundZ, intersects[0].point.z))
+        };
+      }
+    }
+
+    // 2. 🛡️ 兜底保底：使用 Y=0 數學水平面求交點，確保點擊到橋樑、河床或快速點擊時 100% 絕對不漏點
+    const mathGround = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hitPoint = new THREE.Vector3();
+    if (this.raycaster.ray.intersectPlane(mathGround, hitPoint)) {
       return {
-        x: Math.max(-boundX, Math.min(boundX, intersects[0].point.x)),
-        z: Math.max(-boundZ, Math.min(boundZ, intersects[0].point.z))
+        x: Math.max(-boundX, Math.min(boundX, hitPoint.x)),
+        z: Math.max(-boundZ, Math.min(boundZ, hitPoint.z))
       };
     }
+
     return null;
   }
 

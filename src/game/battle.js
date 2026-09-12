@@ -172,50 +172,50 @@ export class BattleEngine {
       const isBlueDead = this.brawlEliminatedTeams.has('blue');
 
       if (team === 'blue') {
-        if (z >= 2.0 && z <= 17.5 && Math.abs(x) <= 17.0) return true;
-        if (isRedDead && z < -2.0) return true;
-        if (isGreenDead && x < -2.0) return true;
-        if (isPurpleDead && x > 2.0) return true;
+        if (z >= 0.0 && z <= 17.5 && Math.abs(x) <= 17.0) return true;
+        if (isRedDead && z < 0.0) return true;
+        if (isGreenDead && x < 0.0) return true;
+        if (isPurpleDead && x > 0.0) return true;
         return false;
       }
       if (team === 'red') {
-        if (z <= -2.0 && z >= -17.5 && Math.abs(x) <= 17.0) return true;
-        if (isBlueDead && z > 2.0) return true;
-        if (isGreenDead && x < -2.0) return true;
-        if (isPurpleDead && x > 2.0) return true;
+        if (z <= 0.0 && z >= -17.5 && Math.abs(x) <= 17.0) return true;
+        if (isBlueDead && z > 0.0) return true;
+        if (isGreenDead && x < 0.0) return true;
+        if (isPurpleDead && x > 0.0) return true;
         return false;
       }
       if (team === 'green') {
-        if (x <= -2.0 && x >= -17.5 && Math.abs(z) <= 17.0) return true;
-        if (isPurpleDead && x > 2.0) return true;
-        if (isBlueDead && z > 2.0) return true;
-        if (isRedDead && z < -2.0) return true;
+        if (x <= 0.0 && x >= -17.5 && Math.abs(z) <= 17.0) return true;
+        if (isPurpleDead && x > 0.0) return true;
+        if (isBlueDead && z > 0.0) return true;
+        if (isRedDead && z < 0.0) return true;
         return false;
       }
       if (team === 'purple') {
-        if (x >= 2.0 && x <= 17.5 && Math.abs(z) <= 17.0) return true;
-        if (isGreenDead && x < -2.0) return true;
-        if (isBlueDead && z > 2.0) return true;
-        if (isRedDead && z < -2.0) return true;
+        if (x >= 0.0 && x <= 17.5 && Math.abs(z) <= 17.0) return true;
+        if (isGreenDead && x < 0.0) return true;
+        if (isBlueDead && z > 0.0) return true;
+        if (isRedDead && z < 0.0) return true;
         return false;
       }
       return true;
     }
 
     if (team === 'blue') {
-      if (z >= 0.5 && z <= 15.5) return true;
+      if (z >= -0.2 && z <= 16.0) return true;
       const enemyLeftAlive = this.towers.find(t => t.id === 'princess_el')?.hp > 0;
       const enemyRightAlive = this.towers.find(t => t.id === 'princess_er')?.hp > 0;
 
-      if (!enemyLeftAlive && x < 0 && z >= -4.5) return true;
-      if (!enemyRightAlive && x > 0 && z >= -4.5) return true;
+      if (!enemyLeftAlive && x < 0 && z >= -5.5) return true;
+      if (!enemyRightAlive && x > 0 && z >= -5.5) return true;
     } else {
-      if (z <= -0.5 && z >= -15.5) return true;
+      if (z <= 0.2 && z >= -16.0) return true;
       const playerLeftAlive = this.towers.find(t => t.id === 'princess_bl')?.hp > 0;
       const playerRightAlive = this.towers.find(t => t.id === 'princess_br')?.hp > 0;
 
-      if (!playerLeftAlive && x < 0 && z <= 4.5) return true;
-      if (!playerRightAlive && x > 0 && z <= 4.5) return true;
+      if (!playerLeftAlive && x < 0 && z <= 5.5) return true;
+      if (!playerRightAlive && x > 0 && z <= 5.5) return true;
     }
 
     return false;

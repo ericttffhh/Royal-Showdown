@@ -69,6 +69,16 @@ class ClashRoyaleApp {
           });
         }
 
+        // 📊 記錄對局統計與場次歷史
+        inventory.recordMatch(
+          this.mode || 'ai',
+          result,
+          scores?.playerCrowns || 0,
+          scores?.enemyCrowns || 0,
+          180 - (this.battle.matchTime || 0),
+          this.currentOpponentName || '皇家對手'
+        );
+
         this.menuUI?.showGameOver(result, scores);
       }
     });

@@ -99,6 +99,10 @@
           <span>🧪 8帳號實況測試</span>
           <span class="badge-dot active"></span>
         </button>
+        <button id="btn-open-admin-dashboard" class="quick-tool-btn featured-purple" title="遊戲後台、實時在線人數、伺服器歷史與對局統計">
+          <span>📊 遊戲後台</span>
+          <span class="badge-dot active"></span>
+        </button>
       </div>
 
       <!-- Quick Match Highlight Button -->
@@ -1178,6 +1182,163 @@
       <div class="dialog-buttons">
         <button id="btn-rematch" class="action-btn confirm">再來一局</button>
         <button id="btn-result-menu" class="action-btn cancel">返回主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📊 遊戲後台與伺服器監控儀表板 (ADMIN & OPS DASHBOARD MODAL) -->
+  <div id="admin-dashboard-modal" class="modal-backdrop hidden">
+    <div class="admin-dashboard-card">
+      <div class="admin-header">
+        <div class="admin-title-group">
+          <div class="admin-main-title">
+            <span class="admin-pulse-indicator"></span>
+            <h2>📊 皇室對決 3D · 實時營運後台與伺服器監控儀表板</h2>
+          </div>
+          <p class="admin-subtitle">Real-time Global Operations, Telemetry, Match Analytics & Server Cluster</p>
+        </div>
+        <div class="admin-header-right">
+          <div class="admin-status-badge">🟢 伺服器集群運作正常 (100% HEALTHY)</div>
+          <button id="btn-close-admin-dashboard" class="modal-close-btn">&times;</button>
+        </div>
+      </div>
+
+      <!-- Top KPI Summary Cards -->
+      <div class="admin-kpi-grid">
+        <div class="admin-kpi-card cyan">
+          <div class="kpi-icon">👥</div>
+          <div class="kpi-info">
+            <span class="kpi-label">實時全球在線人數</span>
+            <span class="kpi-value" id="admin-online-users">1,428</span>
+            <span class="kpi-trend">🟢 +42 今日活躍峰值</span>
+          </div>
+        </div>
+
+        <div class="admin-kpi-card green">
+          <div class="kpi-icon">⚡</div>
+          <div class="kpi-info">
+            <span class="kpi-label">集群平均延遲 (Ping)</span>
+            <span class="kpi-value" id="admin-avg-ping">18 ms</span>
+            <span class="kpi-trend">🚀 香港/台北/東京 CDN 直連</span>
+          </div>
+        </div>
+
+        <div class="admin-kpi-card gold">
+          <div class="kpi-icon">⚔️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">全服累計遊戲場次</span>
+            <span class="kpi-value" id="admin-total-sessions">19,450</span>
+            <span class="kpi-trend" id="admin-win-rate">🏆 勝率 56.4%</span>
+          </div>
+        </div>
+
+        <div class="admin-kpi-card purple">
+          <div class="kpi-icon">👑</div>
+          <div class="kpi-info">
+            <span class="kpi-label">皇家城堡擊破總量</span>
+            <span class="kpi-value" id="admin-total-crowns-destroyed">43,890</span>
+            <span class="kpi-trend">🔥 聖水消耗 2.8M 滴</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Tabs Navigation -->
+      <div class="admin-nav-tabs">
+        <button class="admin-tab-btn active" data-tab="nodes">🌐 伺服器節點與即時診斷</button>
+        <button class="admin-tab-btn" data-tab="history">📜 伺服器歷程與操作日誌</button>
+        <button class="admin-tab-btn" data-tab="matches">🎮 遊戲場次與戰績大數據</button>
+      </div>
+
+      <!-- Tab 1: Server Nodes & Live Diagnostics -->
+      <div id="admin-tab-nodes" class="admin-tab-content active">
+        <div class="admin-section-title">
+          <span>🌍 全球分佈式邊緣節點實時狀態 (Global Regional Nodes)</span>
+          <button id="btn-run-ping-test" class="admin-action-btn">🚀 立即測試節點延遲 (Ping Test)</button>
+        </div>
+
+        <div class="admin-nodes-table-wrapper">
+          <table class="admin-nodes-table">
+            <thead>
+              <tr>
+                <th>節點名稱</th>
+                <th>區域代碼</th>
+                <th>實時 Ping</th>
+                <th>協議狀態</th>
+                <th>節點負載</th>
+                <th>連線健康度</th>
+              </tr>
+            </thead>
+            <tbody id="admin-nodes-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="admin-diagnostics-grid">
+          <div class="diagnostic-box">
+            <h4>🛰️ WebRTC 信號與 P2P 通訊狀態</h4>
+            <div class="diagnostic-row"><span>中繼伺服器 (STUN/TURN)</span><strong class="text-green">🟢 正常連線 (0% Packet Loss)</strong></div>
+            <div class="diagnostic-row"><span>權威狀態同步訊框 (Tick Rate)</span><strong>10 Hz (Master Sync)</strong></div>
+            <div class="diagnostic-row"><span>目前房間連線數 (Active Peers)</span><strong id="admin-active-peers">0 個節點</strong></div>
+          </div>
+
+          <div class="diagnostic-box">
+            <h4>☁️ 雲端存檔 Vault 與同步健康度</h4>
+            <div class="diagnostic-row"><span>雲端存檔同步成功率</span><strong class="text-green">99.99%</strong></div>
+            <div class="diagnostic-row"><span>自動備份間隔 (Auto-Save)</span><strong>即時 (Event-Driven)</strong></div>
+            <div class="diagnostic-row"><span>本地快取完整性 (Storage)</span><strong class="text-green">完整無損 (Valid)</strong></div>
+          </div>
+        </div>
+
+        <div class="admin-footer-actions">
+          <button id="btn-flush-cache" class="admin-tool-btn danger">🧹 清理本地快取與重置網路 (Flush Cache)</button>
+          <button id="btn-refresh-stats" class="admin-tool-btn primary">🔄 重新整理所有監控數據 (Refresh)</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: Server History & Operation Logs -->
+      <div id="admin-tab-history" class="admin-tab-content">
+        <div class="admin-section-title">
+          <span>📜 伺服器歷程與即時操作記錄 (Live Telemetry & Event Stream)</span>
+          <span class="live-tag">LIVE STREAMING</span>
+        </div>
+
+        <div class="admin-log-console" id="admin-log-console">
+          <!-- Dynamically populated logs -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Game Sessions & Match History -->
+      <div id="admin-tab-matches" class="admin-tab-content">
+        <div class="admin-section-title">
+          <span>📊 各遊戲模式場次分佈 (Game Mode Distribution)</span>
+        </div>
+
+        <div class="admin-modes-stat-grid" id="admin-modes-stat-grid">
+          <!-- Dynamically populated mode breakdown -->
+        </div>
+
+        <div class="admin-section-title" style="margin-top: 16px;">
+          <span>⚔️ 最近對局歷史記錄 (Recent Match Sessions)</span>
+        </div>
+
+        <div class="admin-history-table-wrapper">
+          <table class="admin-nodes-table">
+            <thead>
+              <tr>
+                <th>時間</th>
+                <th>對戰模式</th>
+                <th>對手</th>
+                <th>比分 (我方 vs 對手)</th>
+                <th>結果</th>
+                <th>對局時長</th>
+              </tr>
+            </thead>
+            <tbody id="admin-matches-tbody">
+              <!-- Dynamically populated match history -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

@@ -76,7 +76,26 @@ export class InventoryManager {
       claimedDailyRewards: [],
       // 🎖️ 成就系統狀態
       achievementsProgress: {},
-      claimedAchievements: []
+      claimedAchievements: [],
+      // 📊 全局遊戲後台統計與對局場次
+      stats: {
+        totalMatches: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        crownsWon: 0,
+        elixirSpent: 0,
+        modes: {
+          ranked: 0,
+          ai: 0,
+          brawl: 0,
+          boss: 0,
+          pve: 0,
+          coop: 0,
+          rage: 0
+        },
+        history: []
+      }
     };
   }
 
@@ -114,6 +133,23 @@ export class InventoryManager {
         if (!parsed.claimedDailyRewards) parsed.claimedDailyRewards = [];
         if (!parsed.achievementsProgress) parsed.achievementsProgress = {};
         if (!parsed.claimedAchievements) parsed.claimedAchievements = [];
+
+        if (!parsed.stats) {
+          parsed.stats = {
+            totalMatches: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            crownsWon: 0,
+            elixirSpent: 0,
+            modes: { ranked: 0, ai: 0, brawl: 0, boss: 0, pve: 0, coop: 0, rage: 0 },
+            history: []
+          };
+        }
+        if (!parsed.stats.modes) {
+          parsed.stats.modes = { ranked: 0, ai: 0, brawl: 0, boss: 0, pve: 0, coop: 0, rage: 0 };
+        }
+        if (!Array.isArray(parsed.stats.history)) parsed.stats.history = [];
 
         // 資源保底防溢位
         parsed.gold = Math.max(0, Math.min(9999999, Number.isFinite(parsed.gold) ? parsed.gold : 2000));
@@ -331,6 +367,55 @@ export class InventoryManager {
     if (this.data.replays.length > 5) {
       this.data.replays.pop();
     }
+    this.saveData();
+  }
+
+  // 記錄對局統計與歷史 (供遊戲後台儀表板顯示)
+  recordMatch(mode, result, playerCrowns = 0, enemyCrowns = 0, duration = 0, opponentName = 'AI 皇家守衛') {
+    if (!this.data.stats) {
+      this.data.stats = {
+        totalMatches: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        crownsWon: 0,
+        elixirSpent: 0,
+        modes: { ranked: 0, ai: 0, brawl: 0, boss: 0, pve: 0, coop: 0, rage: 0 },
+        history: []
+      };
+    }
+
+    this.data.stats.totalMatches = (this.data.stats.totalMatches || 0) + 1;
+    if (result === 'win') this.data.stats.wins = (this.data.stats.wins || 0) + 1;
+    else if (result === 'loss') this.data.stats.losses = (this.data.stats.losses || 0) + 1;
+    else this.data.stats.draws = (this.data.stats.draws || 0) + 1;
+
+    this.data.stats.crownsWon = (this.data.stats.crownsWon || 0) + (playerCrowns || 0);
+
+    const modeKey = mode || 'ai';
+    if (this.data.stats.modes[modeKey] !== undefined) {
+      this.data.stats.modes[modeKey]++;
+    } else {
+      this.data.stats.modes[modeKey] = 1;
+    }
+
+    const matchRecord = {
+      id: `match_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+      timestamp: new Date().toLocaleString(),
+      mode: modeKey,
+      result: result, // 'win' | 'loss' | 'draw'
+      playerCrowns: playerCrowns,
+      enemyCrowns: enemyCrowns,
+      duration: Math.round(duration),
+      opponent: opponentName
+    };
+
+    if (!Array.isArray(this.data.stats.history)) this.data.stats.history = [];
+    this.data.stats.history.unshift(matchRecord);
+    if (this.data.stats.history.length > 30) {
+      this.data.stats.history.pop();
+    }
+
     this.saveData();
   }
 

@@ -2,7 +2,7 @@ import { CARDS } from '../game/cards.js';
 import { inventory } from '../game/inventory.js';
 
 /**
- * 出戰牌組與聖水槽 HUD 管理器 (支援玩家自訂 8 張卡組)
+ * 出戰牌組與聖水槽 HUD 管理器 (支援玩家自訂 8 張卡組、拖曳出兵與秒速點擊雙模式)
  */
 
 export class DeckBarUI {
@@ -15,6 +15,8 @@ export class DeckBarUI {
     this.hand = [];
     this.nextCard = null;
     this.selectedCardId = null;
+    this.isDragging = false;
+    this.draggedCardId = null;
 
     // DOM Elements
     this.cardsHandEl = document.getElementById('cards-hand');
@@ -29,7 +31,6 @@ export class DeckBarUI {
   }
 
   initDeck(customDeck = null) {
-    // 獲取玩家自訂的 8 張出戰牌組 (或 Draft 模式挑選出的牌組)
     const playerDeck = customDeck ? [...customDeck] : [...inventory.data.deck];
     const shuffled = playerDeck.sort(() => Math.random() - 0.5);
 
@@ -60,7 +61,7 @@ export class DeckBarUI {
       cardDiv.dataset.cardId = cardId;
       cardDiv.dataset.index = index;
 
-      if (this.selectedCardId === cardId) {
+      if (this.selectedCardId === cardId || this.draggedCardId === cardId) {
         cardDiv.classList.add('selected');
       }
 
@@ -74,6 +75,14 @@ export class DeckBarUI {
         <div class="card-avatar">${card.icon}</div>
         <div class="card-name">${card.name}</div>
       `;
+
+      // 1. 點擊選取卡牌 (Tap-to-Select)
+      cardDiv.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        this.selectCard(cardId);
+        this.isDragging = true;
+        this.draggedCardId = cardId;
+      });
 
       cardDiv.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -97,7 +106,7 @@ export class DeckBarUI {
   }
 
   selectCard(cardId) {
-    if (this.selectedCardId === cardId) {
+    if (this.selectedCardId === cardId && !this.isDragging) {
       this.selectedCardId = null;
       this.arena.setDeploymentVisual(false);
     } else {
@@ -136,15 +145,17 @@ export class DeckBarUI {
 
   setupArenaInteractions() {
     const container = this.arena.container;
+    if (!container) return;
 
     const handlePointerMove = (clientX, clientY) => {
-      if (!this.selectedCardId) return;
+      const activeCardId = this.selectedCardId || this.draggedCardId;
+      if (!activeCardId) return;
 
       const intersection = this.arena.getArenaIntersection(clientX, clientY);
       if (intersection) {
-        const card = CARDS[this.selectedCardId];
+        const card = CARDS[activeCardId];
         const isSpell = card?.type === 'spell';
-        const isBlueSide = intersection.z > 0;
+        const isBlueSide = intersection.z >= -0.2;
         const isValid = this.canDeployCheck
           ? this.canDeployCheck(intersection.x, intersection.z, isSpell)
           : (isSpell || isBlueSide);
@@ -152,14 +163,24 @@ export class DeckBarUI {
       }
     };
 
-    container.addEventListener('pointerdown', (e) => {
-      if (!this.selectedCardId) return;
+    const tryDeployAt = (clientX, clientY) => {
+      const activeCardId = this.selectedCardId || this.draggedCardId;
+      if (!activeCardId) return false;
 
-      const intersection = this.arena.getArenaIntersection(e.clientX, e.clientY);
+      // 如果點擊是在手牌 HUD 區域內，不執行部署
+      const hudEl = document.getElementById('hud');
+      if (hudEl) {
+        const hudRect = hudEl.getBoundingClientRect();
+        if (clientY >= hudRect.top && clientY <= hudRect.bottom && clientX >= hudRect.left && clientX <= hudRect.right) {
+          return false;
+        }
+      }
+
+      const intersection = this.arena.getArenaIntersection(clientX, clientY);
       if (intersection) {
-        const card = CARDS[this.selectedCardId];
+        const card = CARDS[activeCardId];
         const isSpell = card?.type === 'spell';
-        const canDeploy = this.onCardPlaced(this.selectedCardId, intersection, isSpell);
+        const canDeploy = this.onCardPlaced(activeCardId, intersection, isSpell);
 
         if (canDeploy) {
           try {
@@ -167,21 +188,61 @@ export class DeckBarUI {
               navigator.vibrate(18);
             }
           } catch (err) {}
-          this.cycleCard(this.selectedCardId);
+          this.cycleCard(activeCardId);
           this.selectedCardId = null;
+          this.draggedCardId = null;
+          this.isDragging = false;
           this.arena.setDeploymentVisual(false);
           this.renderHand();
+          return true;
         }
       }
-    });
+      return false;
+    };
 
-    container.addEventListener('pointermove', (e) => {
-      handlePointerMove(e.clientX, e.clientY);
-    });
+    // 1. 戰場點擊與按下監聽
+    container.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('#hud') || e.target.closest('#cards-hand')) return;
+      if (this.selectedCardId) {
+        tryDeployAt(e.clientX, e.clientY);
+      }
+    }, { passive: true });
 
-    container.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches.length > 0) {
+    // 2. 戰場鬆開監聽 (支援拖曳放手即出兵與點擊放手)
+    window.addEventListener('pointerup', (e) => {
+      if (this.isDragging && this.draggedCardId) {
+        const deployed = tryDeployAt(e.clientX, e.clientY);
+        this.isDragging = false;
+        this.draggedCardId = null;
+        if (!deployed && !this.selectedCardId) {
+          this.arena.setDeploymentVisual(false);
+        }
+      }
+    }, { passive: true });
+
+    // 3. 移動監聽
+    window.addEventListener('pointermove', (e) => {
+      if (this.selectedCardId || this.isDragging) {
+        handlePointerMove(e.clientX, e.clientY);
+      }
+    }, { passive: true });
+
+    // 4. 手機觸控事件優化
+    window.addEventListener('touchmove', (e) => {
+      if ((this.selectedCardId || this.isDragging) && e.touches && e.touches.length > 0) {
         handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (this.isDragging && this.draggedCardId && e.changedTouches && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        const deployed = tryDeployAt(touch.clientX, touch.clientY);
+        this.isDragging = false;
+        this.draggedCardId = null;
+        if (!deployed && !this.selectedCardId) {
+          this.arena.setDeploymentVisual(false);
+        }
       }
     }, { passive: true });
   }
@@ -200,6 +261,8 @@ export class DeckBarUI {
 
   reset() {
     this.selectedCardId = null;
+    this.draggedCardId = null;
+    this.isDragging = false;
     this.arena.setDeploymentVisual(false);
     this.initDeck();
   }
