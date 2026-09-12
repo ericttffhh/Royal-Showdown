@@ -616,10 +616,8 @@ class ClashRoyaleApp {
       deploySide = (pos.z > 0 || isSpell) ? 'blue' : 'red';
     }
 
-    const canDeploy = this.battle.canDeployAt(pos.x, pos.z, deploySide, isSpell);
-    if (!canDeploy) return false;
-
-    const success = this.battle.deployCard(cardId, pos, deploySide, false);
+    const finalPos = this.battle.getLegalDeployPosition(pos, deploySide, isSpell);
+    const success = this.battle.deployCard(cardId, finalPos, deploySide, false);
     if (success) {
       const deployId = `${this.network.peer?.id || 'local'}_${Date.now()}_${++this.deploySeq}`;
       this.handledDeployIds.add(deployId);
@@ -629,8 +627,8 @@ class ClashRoyaleApp {
           type: 'deploy',
           deployId,
           cardId,
-          x: pos.x,
-          z: pos.z,
+          x: finalPos.x,
+          z: finalPos.z,
           senderId: this.network.peer?.id
         });
       } else if (this.mode === 'brawl' && this.network.getConnectedCount() > 0) {
@@ -638,8 +636,8 @@ class ClashRoyaleApp {
           type: 'brawl_deploy',
           deployId,
           cardId,
-          x: pos.x,
-          z: pos.z,
+          x: finalPos.x,
+          z: finalPos.z,
           team: deploySide,
           senderId: this.network.peer?.id
         });

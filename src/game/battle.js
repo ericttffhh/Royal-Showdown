@@ -203,22 +203,47 @@ export class BattleEngine {
     }
 
     if (team === 'blue') {
-      if (z >= -0.2 && z <= 16.0) return true;
+      if (z >= -0.5 && z <= 17.5 && Math.abs(x) <= 9.5) return true;
       const enemyLeftAlive = this.towers.find(t => t.id === 'princess_el')?.hp > 0;
       const enemyRightAlive = this.towers.find(t => t.id === 'princess_er')?.hp > 0;
 
-      if (!enemyLeftAlive && x < 0 && z >= -5.5) return true;
-      if (!enemyRightAlive && x > 0 && z >= -5.5) return true;
+      if (!enemyLeftAlive && x < 0 && z >= -7.5) return true;
+      if (!enemyRightAlive && x > 0 && z >= -7.5) return true;
     } else {
-      if (z <= 0.2 && z >= -16.0) return true;
+      if (z <= 0.5 && z >= -17.5 && Math.abs(x) <= 9.5) return true;
       const playerLeftAlive = this.towers.find(t => t.id === 'princess_bl')?.hp > 0;
       const playerRightAlive = this.towers.find(t => t.id === 'princess_br')?.hp > 0;
 
-      if (!playerLeftAlive && x < 0 && z <= 5.5) return true;
-      if (!playerRightAlive && x > 0 && z <= 5.5) return true;
+      if (!playerLeftAlive && x < 0 && z <= 7.5) return true;
+      if (!playerRightAlive && x > 0 && z <= 7.5) return true;
     }
 
     return false;
+  }
+
+  getLegalDeployPosition(pos, isBlueOrTeam, isSpell = false) {
+    if (isSpell) return { x: pos.x, z: pos.z };
+    const team = typeof isBlueOrTeam === 'string' ? isBlueOrTeam : (isBlueOrTeam ? 'blue' : 'red');
+
+    if (this.canDeployAt(pos.x, pos.z, team, isSpell)) {
+      return { x: pos.x, z: pos.z };
+    }
+
+    // 智能貼齊最接近的合法部署點 (Smart Nearest Clamping)
+    const clampedX = Math.max(-8.5, Math.min(8.5, pos.x));
+    if (team === 'blue') {
+      const enemyLeftAlive = this.towers.find(t => t.id === 'princess_el')?.hp > 0;
+      const enemyRightAlive = this.towers.find(t => t.id === 'princess_er')?.hp > 0;
+      let minZ = 0.0;
+      if (!enemyLeftAlive && clampedX < 0) minZ = -6.5;
+      else if (!enemyRightAlive && clampedX > 0) minZ = -6.5;
+
+      const legalZ = Math.max(minZ, Math.min(16.5, pos.z));
+      return { x: clampedX, z: legalZ };
+    } else {
+      const legalZ = Math.max(-16.5, Math.min(0.0, pos.z));
+      return { x: clampedX, z: legalZ };
+    }
   }
 
   deployCard(cardId, targetPos, isBlueOrTeam, isRemote = false) {
