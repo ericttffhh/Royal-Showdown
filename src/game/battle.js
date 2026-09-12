@@ -396,12 +396,12 @@ export class BattleEngine {
         }, idx * 75);
       });
     } else if (ability.id === 'soul_summon') {
-      // 💀 骷髏死靈王者：亡靈召喚 (環繞召喚 8 隻骷髏大軍)
+      // 💀 骷髏死靈王者：亡靈召喚 (環繞召喚 5 隻骷髏親衛隊)
       this.callbacks.onAnnouncement?.('👑 骷髏死靈王者發動【亡靈召喚】！');
-      this.effects.createExplosion(this.championUnit.position, 0xa855f7, 30, 2.5);
+      this.effects.createExplosion(this.championUnit.position, 0xa855f7, 24, 2.0);
       const center = this.championUnit.position;
-      for (let i = 0; i < 8; i++) {
-        const angle = (i * Math.PI * 2) / 8;
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * Math.PI * 2) / 5;
         const offsetPos = new THREE.Vector3(center.x + Math.cos(angle) * 1.5, 0, center.z + Math.sin(angle) * 1.5);
         this.spawnTroops(CARDS.skeletons, offsetPos, 'blue');
       }

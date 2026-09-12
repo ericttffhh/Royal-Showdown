@@ -82,6 +82,11 @@ export class InventoryManager {
       ownedTowerSkins: ['classic'],
       selectedArenaTheme: 'royal_valley',
       ownedArenaThemes: ['royal_valley', 'lava_chasm', 'frozen_peak'],
+      // 🧗 肉鴿地下城試煉塔持久進度
+      dungeon: {
+        currentFloor: 1,
+        relics: []
+      },
       // 📊 全局遊戲後台統計與對局場次
       stats: {
         totalMatches: 0,
@@ -143,6 +148,7 @@ export class InventoryManager {
         if (!parsed.selectedTowerSkin) parsed.selectedTowerSkin = 'classic';
         if (!parsed.selectedArenaTheme) parsed.selectedArenaTheme = 'royal_valley';
         if (!parsed.ownedArenaThemes) parsed.ownedArenaThemes = ['royal_valley', 'lava_chasm', 'frozen_peak'];
+        if (!parsed.dungeon) parsed.dungeon = { currentFloor: 1, relics: [] };
 
         if (!parsed.stats) {
           parsed.stats = {

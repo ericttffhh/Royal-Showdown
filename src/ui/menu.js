@@ -21,10 +21,10 @@ export class MenuUI {
     this.deckBuilder = null;
     this.selectedSignupAvatar = '👑';
 
-    // 🧗 肉鴿地下城狀態
-    this.currentDungeonFloor = 1;
-    this.dungeonRelics = [];
-    this.selectedDungeonFloor = 1;
+    // 🧗 肉鴿地下城狀態 (由存檔持久化載入)
+    this.currentDungeonFloor = inventory.data?.dungeon?.currentFloor || 1;
+    this.dungeonRelics = Array.isArray(inventory.data?.dungeon?.relics) ? [...inventory.data.dungeon.relics] : [];
+    this.selectedDungeonFloor = this.currentDungeonFloor;
 
     // 🏰 造型與競技場主題
     this.selectedTowerSkin = inventory.data?.selectedTowerSkin || 'classic';
@@ -2940,6 +2940,17 @@ export class MenuUI {
       this.menuOverlay.classList.remove('hidden');
     });
 
+    document.getElementById('btn-reset-dungeon')?.addEventListener('click', () => {
+      this.currentDungeonFloor = 1;
+      this.selectedDungeonFloor = 1;
+      this.dungeonRelics = [];
+      this.saveDungeonProgress();
+      sounds.playTone(400, 200, 0.2, 'triangle');
+      this.showAnnouncement('🔄 肉鴿地牢輪迴已重置回第 1 層！');
+      this.renderDungeonRelicsTray();
+      this.renderDungeonFloors();
+    });
+
     document.getElementById('btn-start-dungeon-floor')?.addEventListener('click', () => {
       this.startSelectedDungeonFloor();
     });
@@ -2958,6 +2969,13 @@ export class MenuUI {
     document.getElementById('champion-ability-btn')?.addEventListener('click', () => {
       this.callbacks.onTriggerChampionAbility?.();
     });
+  }
+
+  saveDungeonProgress() {
+    if (!inventory.data.dungeon) inventory.data.dungeon = { currentFloor: 1, relics: [] };
+    inventory.data.dungeon.currentFloor = this.currentDungeonFloor;
+    inventory.data.dungeon.relics = [...this.dungeonRelics];
+    inventory.saveData();
   }
 
   openDungeonModal() {
@@ -3060,9 +3078,11 @@ export class MenuUI {
     if (this.currentDungeonFloor < 10) {
       this.currentDungeonFloor++;
       this.selectedDungeonFloor = this.currentDungeonFloor;
+      this.saveDungeonProgress();
       // 觸發神聖聖物三選一
       this.openRelicPickerModal();
     } else {
+      this.saveDungeonProgress();
       this.showAnnouncement('👑 恭喜完全征服【肉鴿地下城 10 層深淵】！登峰造極！');
     }
   }
@@ -3095,6 +3115,7 @@ export class MenuUI {
 
       item.addEventListener('click', () => {
         this.dungeonRelics.push(relicId);
+        this.saveDungeonProgress();
         sounds.playVictory();
         confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
         modal.classList.add('hidden');

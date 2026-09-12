@@ -433,25 +433,25 @@ export const CARDS = {
     rarity: 'champion',
     icon: '👑💀',
     isChampion: true,
-    description: '冥界骷髏霸主！在戰場上收集逝去亡魂，並能施展【靈魂亡靈召喚】呼喚亡者骷髏大軍！',
+    description: '冥界骷髏王者！手持亡靈重鎚造成範圍打擊，並能施展【亡靈召喚】呼喚骷髏親衛隊協同作戰！',
     count: 1,
-    hp: 2300,
-    damage: 205,
+    hp: 1650,
+    damage: 160,
     hitSpeed: 1.6,
     speed: 1.1,
     range: 1.0,
-    splashRadius: 1.5,
+    splashRadius: 1.4,
     targets: 'ground',
     flying: false,
     radius: 0.7,
-    mass: 2.5,
+    mass: 2.2,
     ability: {
       id: 'soul_summon',
       name: '亡靈亡者召喚',
       icon: '💀✨',
       cost: 2,
-      cooldown: 15,
-      description: '消耗 2 聖水，在周圍瞬間召喚 8 隻受靈魂庇護的狂暴骷髏親衛隊！'
+      cooldown: 18,
+      description: '消耗 2 聖水，在周圍召喚 5 隻狂暴骷髏親衛隊！'
     }
   },
 
