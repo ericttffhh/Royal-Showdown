@@ -1,9 +1,9 @@
-import { CARDS } from '../game/cards.js';
+import { CARDS, CARD_EVOLUTIONS } from '../game/cards.js';
 import { inventory } from '../game/inventory.js';
 import { sounds } from '../audio/sound.js';
 
 /**
- * 出戰牌組與聖水槽 HUD 管理器 (支援 100% 零漏點 Tap-to-Deploy 與 Drag-to-Deploy 雙模式)
+ * 出戰牌組與聖水槽 HUD 管理器 (支援 100% 零漏點 Tap-to-Deploy 與 Drag-to-Deploy 雙模式、卡牌覺醒進化)
  */
 
 export class DeckBarUI {
@@ -20,6 +20,9 @@ export class DeckBarUI {
     this.isDragging = false;
     this.draggedCardId = null;
     this.lastCardSelectTime = 0;
+
+    // ⚡ 卡牌覺醒輪次計數 (Evolution Cycles)
+    this.evolutionCycles = {};
 
     // DOM Elements
     this.cardsHandEl = document.getElementById('cards-hand');
@@ -52,6 +55,19 @@ export class DeckBarUI {
     this.initDeck(deck);
   }
 
+  getEvoInfo(cardId) {
+    const evoEntry = CARD_EVOLUTIONS[cardId];
+    if (!evoEntry) return null;
+    const currentCycle = this.evolutionCycles[cardId] || 0;
+    const isEvolved = currentCycle >= evoEntry.cycleNeeded;
+    return {
+      evo: evoEntry,
+      currentCycle,
+      isEvolved,
+      cycleNeeded: evoEntry.cycleNeeded
+    };
+  }
+
   renderHand() {
     if (!this.cardsHandEl) return;
     this.cardsHandEl.innerHTML = '';
@@ -60,8 +76,11 @@ export class DeckBarUI {
       const card = CARDS[cardId];
       if (!card) return;
 
+      const evoInfo = this.getEvoInfo(cardId);
+      const isEvoReady = evoInfo && evoInfo.isEvolved;
+
       const cardDiv = document.createElement('div');
-      cardDiv.className = `card-item rarity-${card.rarity}`;
+      cardDiv.className = `card-item rarity-${card.rarity} ${isEvoReady ? 'card-evolved' : ''}`;
       cardDiv.dataset.cardId = cardId;
       cardDiv.dataset.index = index;
 
@@ -74,10 +93,16 @@ export class DeckBarUI {
         cardDiv.classList.add('disabled');
       }
 
+      let evoBadgeHtml = '';
+      if (evoInfo) {
+        evoBadgeHtml = `<div class="evo-shard-badge ${isEvoReady ? 'ready' : ''}">⚡ ${evoInfo.currentCycle}/${evoInfo.cycleNeeded}</div>`;
+      }
+
       cardDiv.innerHTML = `
         <div class="card-elixir-cost">${card.cost}</div>
-        <div class="card-avatar">${card.icon}</div>
-        <div class="card-name">${card.name}</div>
+        ${evoBadgeHtml}
+        <div class="card-avatar">${isEvoReady ? evoInfo.evo.icon : card.icon}</div>
+        <div class="card-name">${isEvoReady ? evoInfo.evo.name : card.name}</div>
       `;
 
       // 觸控與點擊手牌處理
@@ -292,6 +317,22 @@ export class DeckBarUI {
     const handIndex = this.hand.indexOf(usedCardId);
     if (handIndex === -1) return;
 
+    // ⚡ 覺醒進化輪次流轉
+    const evoEntry = CARD_EVOLUTIONS[usedCardId];
+    if (evoEntry) {
+      const currentCycle = this.evolutionCycles[usedCardId] || 0;
+      if (currentCycle >= evoEntry.cycleNeeded) {
+        // 已釋放覺醒形態，重置回 0
+        this.evolutionCycles[usedCardId] = 0;
+      } else {
+        // 累積 1 輪
+        this.evolutionCycles[usedCardId] = currentCycle + 1;
+        if (this.evolutionCycles[usedCardId] >= evoEntry.cycleNeeded) {
+          sounds.playEvoTrigger();
+        }
+      }
+    }
+
     this.deckQueue.push(usedCardId);
     this.hand[handIndex] = this.nextCard;
     this.nextCard = this.deckQueue.shift();
@@ -305,6 +346,7 @@ export class DeckBarUI {
     this.selectedCardIndex = null;
     this.draggedCardId = null;
     this.isDragging = false;
+    this.evolutionCycles = {};
     this.arena.setDeploymentVisual(false);
     this.initDeck();
   }

@@ -58,12 +58,26 @@ export class BattleEngine {
     this.kingPowerCooldowns = { shield: 0, blizzard: 0, meteor: 0 };
     this.towerShieldTimer = { blue: 0, red: 0 };
 
+    // 👑 英雄冠軍系統與主動技能 (Champions & Active Abilities)
+    this.championUnit = null;
+    this.championCooldown = 0;
+
+    // 🧗 肉鴿地牢試煉塔與聖物系統 (Dungeon & Relics)
+    this.dungeonFloor = null;
+    this.dungeonRelics = [];
+    this.playerTowerSkin = 'classic';
+    this.enemyTowerSkin = 'classic';
+
     this.bridges = [
       { x: -4.5, z: 0, width: 2.2 },
       { x: 4.5, z: 0, width: 2.2 }
     ];
 
     this.initTowers();
+  }
+
+  hasRelic(relicId) {
+    return this.dungeonRelics && this.dungeonRelics.includes(relicId);
   }
 
   triggerVibrate(pattern) {
@@ -81,6 +95,11 @@ export class BattleEngine {
     this.is2v2 = mode === 'coop';
     this.hazardsEnabled = options.hazards !== false;
     this.brawlEliminatedTeams.clear();
+
+    this.dungeonFloor = options.dungeonFloor || null;
+    this.dungeonRelics = options.dungeonRelics || [];
+    this.playerTowerSkin = options.playerTowerSkin || (inventory.data?.selectedTowerSkin || 'classic');
+    this.enemyTowerSkin = options.enemyTowerSkin || (mode === 'boss' ? 'inferno' : (options.dungeonFloor ? (options.dungeonFloor.floor > 5 ? 'inferno' : 'classic') : 'classic'));
 
     if (mode === 'brawl') {
       this.arena.setBrawlLayout(true, this.playerTeam);
@@ -102,36 +121,46 @@ export class BattleEngine {
       const brawlStats = { hp: 4800, damage: 190, hitSpeed: 1.0, range: 8.0 };
 
       // South (Blue - 玩家/南方)
-      this.towers.push(this.createTower('king_blue', 'blue', 0, 14.5, brawlStats, 'king'));
+      this.towers.push(this.createTower('king_blue', 'blue', 0, 14.5, brawlStats, 'king', this.playerTowerSkin));
 
       // North (Red - 北方烈焰)
-      this.towers.push(this.createTower('king_red', 'red', 0, -14.5, brawlStats, 'king'));
+      this.towers.push(this.createTower('king_red', 'red', 0, -14.5, brawlStats, 'king', 'inferno'));
 
       // West (Green - 西方翡翠)
-      this.towers.push(this.createTower('king_green', 'green', -14.5, 0, brawlStats, 'king'));
+      this.towers.push(this.createTower('king_green', 'green', -14.5, 0, brawlStats, 'king', 'classic'));
 
       // East (Purple - 東方虛空)
-      this.towers.push(this.createTower('king_purple', 'purple', 14.5, 0, brawlStats, 'king'));
+      this.towers.push(this.createTower('king_purple', 'purple', 14.5, 0, brawlStats, 'king', 'cyber'));
       return;
     }
 
-    const pLeft = this.createTower('princess_bl', true, -4.5, 9.5, TOWER_STATS.princess, 'princess');
-    const pRight = this.createTower('princess_br', true, 4.5, 9.5, TOWER_STATS.princess, 'princess');
-    const pKing = this.createTower('king_b', true, 0, 13.0, TOWER_STATS.king, 'king');
+    let enemyHpMult = 1.0;
+    if (this.dungeonFloor && this.dungeonFloor.towerHpMult) {
+      enemyHpMult = this.dungeonFloor.towerHpMult;
+    }
 
-    const eLeft = this.createTower('princess_el', false, -4.5, -9.5, TOWER_STATS.princess, 'princess');
-    const eRight = this.createTower('princess_er', false, 4.5, -9.5, TOWER_STATS.princess, 'princess');
-    const eKing = this.createTower('king_e', false, 0, -13.0, TOWER_STATS.king, 'king');
+    const pPrincessStats = { ...TOWER_STATS.princess };
+    const pKingStats = { ...TOWER_STATS.king };
+    const ePrincessStats = { ...TOWER_STATS.princess, hp: Math.round(TOWER_STATS.princess.hp * enemyHpMult) };
+    const eKingStats = { ...TOWER_STATS.king, hp: Math.round(TOWER_STATS.king.hp * enemyHpMult) };
+
+    const pLeft = this.createTower('princess_bl', true, -4.5, 9.5, pPrincessStats, 'princess', this.playerTowerSkin);
+    const pRight = this.createTower('princess_br', true, 4.5, 9.5, pPrincessStats, 'princess', this.playerTowerSkin);
+    const pKing = this.createTower('king_b', true, 0, 13.0, pKingStats, 'king', this.playerTowerSkin);
+
+    const eLeft = this.createTower('princess_el', false, -4.5, -9.5, ePrincessStats, 'princess', this.enemyTowerSkin);
+    const eRight = this.createTower('princess_er', false, 4.5, -9.5, ePrincessStats, 'princess', this.enemyTowerSkin);
+    const eKing = this.createTower('king_e', false, 0, -13.0, eKingStats, 'king', this.enemyTowerSkin);
 
     this.towers = [pLeft, pRight, pKing, eLeft, eRight, eKing];
   }
 
-  createTower(id, isBlueOrTeam, x, z, stats, type) {
+  createTower(id, isBlueOrTeam, x, z, stats, type, skinId = 'classic') {
     const team = typeof isBlueOrTeam === 'string' ? isBlueOrTeam : (isBlueOrTeam ? 'blue' : 'red');
     const isBlue = team === 'blue';
     const mesh = type === 'king'
-      ? ModelFactory.createKingTower(team)
-      : ModelFactory.createPrincessTower(team);
+      ? ModelFactory.createKingTower(team, skinId)
+      : ModelFactory.createPrincessTower(team, skinId);
 
     mesh.position.set(x, 0, z);
     this.arena.scene.add(mesh);
@@ -141,6 +170,7 @@ export class BattleEngine {
       isBlue,
       team,
       type,
+      skinId,
       x,
       z,
       position: new THREE.Vector3(x, 0, z),
@@ -271,9 +301,15 @@ export class BattleEngine {
     }
 
     sounds.playDeploy();
+    sounds.playVoice(card.id);
 
     // 記錄重播事件
     replayRecorder.recordEvent(180 - this.matchTime, 'deploy', { cardId, pos: targetPos, isBlue: isPlayer, team });
+
+    // ⚡ 肉鴿聖物：天譴雷霆 (Thunder Strike Relic)
+    if (isPlayer && this.hasRelic('thunder_strike')) {
+      this.triggerRelicLightning(targetPos);
+    }
 
     if (card.type === 'spell') {
       this.castSpell(card, targetPos, team);
@@ -285,7 +321,109 @@ export class BattleEngine {
       return true;
     }
 
+    if (card.isChampion && isPlayer) {
+      this.championCard = card;
+    }
+
     this.spawnTroops(card, targetPos, team);
+    return true;
+  }
+
+  // ⚡ 肉鴿聖物：落雷天譴
+  triggerRelicLightning(pos) {
+    const enemies = [...this.troops, ...this.towers, ...this.buildings].filter(e => !e.isBlue && e.hp > 0);
+    if (enemies.length === 0) return;
+
+    let closest = null;
+    let minDist = 12.0;
+    enemies.forEach(e => {
+      const d = pos.distanceTo ? pos.distanceTo(e.position) : new THREE.Vector3(pos.x, 0, pos.z).distanceTo(e.position);
+      if (d < minDist) {
+        minDist = d;
+        closest = e;
+      }
+    });
+
+    if (closest) {
+      this.effects.createExplosion(closest.position, 0x00f0ff, 18, 1.8);
+      sounds.playTone(1200, 300, 0.15, 'sawtooth', 0.3);
+      this.damageEntity(closest, 200, true);
+    }
+  }
+
+  // 👑 英雄主動技能觸發 (Champion Active Ability Trigger)
+  activateChampionAbility() {
+    if (!this.championUnit || this.championUnit.hp <= 0 || !this.championCard) {
+      this.callbacks.onAnnouncement?.('⚠️ 戰場上沒有存活的己方英雄！');
+      return false;
+    }
+
+    const ability = this.championCard.ability;
+    if (!ability) return false;
+
+    if (this.championCooldown > 0) {
+      this.callbacks.onAnnouncement?.(`⏳ 英雄技能冷卻中 (${Math.ceil(this.championCooldown)}s)`);
+      return false;
+    }
+
+    if (this.playerElixir < ability.cost) {
+      this.callbacks.onAnnouncement?.(`💧 聖水不足！需要 ${ability.cost} 聖水`);
+      return false;
+    }
+
+    this.playerElixir -= ability.cost;
+    this.callbacks.onElixirChange?.(this.playerElixir);
+    this.championCooldown = ability.cooldown;
+
+    sounds.playChampionAbility(ability.id);
+    this.triggerVibrate([50, 40, 70]);
+
+    if (ability.id === 'dash_strike') {
+      // 🤴 金甲狂劍士：金光疾風連斬 (衝刺連斬最多 6 個目標)
+      this.callbacks.onAnnouncement?.('⚡ 金甲狂劍士發動【金光疾風連斬】！');
+      const enemies = this.troops.filter(t => !t.isBlue && t.hp > 0);
+      enemies.sort((a, b) => a.position.distanceTo(this.championUnit.position) - b.position.distanceTo(this.championUnit.position));
+      const targets = enemies.slice(0, ability.dashes || 6);
+
+      targets.forEach((target, idx) => {
+        setTimeout(() => {
+          if (this.championUnit && this.championUnit.hp > 0 && target.hp > 0) {
+            this.championUnit.position.copy(target.position);
+            if (this.championUnit.mesh) this.championUnit.mesh.position.copy(target.position);
+            this.effects.createExplosion(target.position, 0xffd700, 24, 2.0);
+            this.damageEntity(target, ability.damage || 320, true);
+          }
+        }, idx * 75);
+      });
+    } else if (ability.id === 'soul_summon') {
+      // 💀 骷髏死靈王者：亡靈召喚 (環繞召喚 8 隻骷髏大軍)
+      this.callbacks.onAnnouncement?.('👑 骷髏死靈王者發動【亡靈召喚】！');
+      this.effects.createExplosion(this.championUnit.position, 0xa855f7, 30, 2.5);
+      const center = this.championUnit.position;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI * 2) / 8;
+        const offsetPos = new THREE.Vector3(center.x + Math.cos(angle) * 1.5, 0, center.z + Math.sin(angle) * 1.5);
+        this.spawnTroops(CARDS.skeletons, offsetPos, 'blue');
+      }
+    } else if (ability.id === 'cloak_shot') {
+      // 👸 幻影隱匿弓皇：隱匿神速連弩 (隱身 3.5s + 300% 狂暴射速)
+      this.callbacks.onAnnouncement?.('🏹 幻影隱匿弓皇發動【隱匿神速連弩】！');
+      this.championUnit.invisibleTimer = ability.duration || 3.5;
+      this.championUnit.hitSpeed = this.championUnit.hitSpeed / (ability.speedMultiplier || 3.0);
+      this.effects.createExplosion(this.championUnit.position, 0x10b981, 20, 2.0);
+
+      // 敵軍失去仇恨
+      this.troops.filter(t => !t.isBlue && t.currentTarget === this.championUnit).forEach(t => t.currentTarget = null);
+      this.towers.filter(t => !t.isBlue && t.target === this.championUnit).forEach(t => t.target = null);
+
+      setTimeout(() => {
+        if (this.championUnit && this.championUnit.hp > 0) {
+          const originalCard = CARDS.archer_queen;
+          if (originalCard) this.championUnit.hitSpeed = originalCard.hitSpeed;
+        }
+      }, (ability.duration || 3.5) * 1000);
+    }
+
     return true;
   }
 
@@ -426,10 +564,26 @@ spawnBuilding(card, pos, isBlueOrTeam) {
 spawnTroops(card, targetPos, isBlueOrTeam) {
   const team = typeof isBlueOrTeam === 'string' ? isBlueOrTeam : (isBlueOrTeam ? 'blue' : 'red');
   const isBlue = team === 'blue';
+  const isPlayer = team === this.playerTeam;
   const count = card.count || 1;
   const offsets = this.calculateSpawnOffsets(count);
 
   const teamSmokeColors = { blue: 0x2288ff, red: 0xff3355, green: 0x00e676, purple: 0xd500f9 };
+
+  let troopHp = card.hp;
+  let troopSpeed = card.speed;
+  let troopHitSpeed = card.hitSpeed;
+
+  // ⚡ 肉鴿聖物：泰坦不滅鋼甲 (+30% HP)
+  if (isPlayer && this.hasRelic('iron_skin')) {
+    troopHp = Math.round(troopHp * 1.30);
+  }
+
+  // ⚡ 肉鴿聖物：時空疾速印記 (+25% Move/Atk Speed)
+  if (isPlayer && this.hasRelic('chrono_haste')) {
+    troopSpeed *= 1.25;
+    troopHitSpeed *= 0.8;
+  }
 
   offsets.forEach((offset) => {
     const id = `troop_${nextEntityId++}`;
@@ -444,16 +598,16 @@ spawnTroops(card, targetPos, isBlueOrTeam) {
 
     this.effects.createSpawnSmoke(pos, teamSmokeColors[team] || 0x2288ff);
 
-    this.troops.push({
+    const unit = {
       id,
       cardId: card.id,
       isBlue,
       team,
-      hp: card.hp,
-      maxHp: card.hp,
+      hp: troopHp,
+      maxHp: troopHp,
       damage: card.damage,
-      hitSpeed: card.hitSpeed,
-      speed: card.speed,
+      hitSpeed: troopHitSpeed,
+      speed: troopSpeed,
       range: card.range,
       targets: card.targets,
       flying: card.flying,
@@ -470,7 +624,14 @@ spawnTroops(card, targetPos, isBlueOrTeam) {
       currentTarget: null,
       animTime: Math.random() * 5,
       spawnAge: 0
-    });
+    };
+
+    if (card.isChampion && isPlayer) {
+      this.championUnit = unit;
+      this.championCard = card;
+    }
+
+    this.troops.push(unit);
   });
 }
 
@@ -503,6 +664,18 @@ update(rawDelta) {
   });
   this.towerShieldTimer.blue = Math.max(0, this.towerShieldTimer.blue - deltaTime);
   this.towerShieldTimer.red = Math.max(0, this.towerShieldTimer.red - deltaTime);
+
+  // 👑 更新英雄技能冷卻與在場狀態
+  if (this.championCooldown > 0) {
+    this.championCooldown = Math.max(0, this.championCooldown - deltaTime);
+  }
+
+  const isChampAlive = !!(this.championUnit && this.championUnit.hp > 0);
+  this.callbacks.onChampionStatus?.({
+    active: isChampAlive,
+    champion: this.championCard,
+    cooldown: this.championCooldown
+  });
 
   this.updateMatchTime(deltaTime);
   this.updateElixir(deltaTime);
@@ -558,11 +731,23 @@ updateElixir(deltaTime) {
     regenRate = 2.5;
   }
 
-  this.playerElixir = Math.min(10, this.playerElixir + regenRate * deltaTime);
-  this.enemyElixir = Math.min(10, this.enemyElixir + regenRate * deltaTime);
+  // ⚡ 肉鴿聖物：永恆聖水靈泉 (+25% Elixir Speed)
+  let playerRegen = regenRate;
+  if (this.hasRelic('elixir_spring')) {
+    playerRegen *= 1.25;
+  }
+
+  let enemyRegen = regenRate;
+  if (this.dungeonFloor && this.dungeonFloor.enemyElixirRate) {
+    enemyRegen *= this.dungeonFloor.enemyElixirRate;
+  }
+
+  this.playerElixir = Math.min(10, this.playerElixir + playerRegen * deltaTime);
+  this.enemyElixir = Math.min(10, this.enemyElixir + enemyRegen * deltaTime);
 
   ['blue', 'red', 'green', 'purple'].forEach(tm => {
-    this.teamElixir[tm] = Math.min(10, (this.teamElixir[tm] || 5.0) + regenRate * deltaTime);
+    const rate = (tm === this.playerTeam) ? playerRegen : enemyRegen;
+    this.teamElixir[tm] = Math.min(10, (this.teamElixir[tm] || 5.0) + rate * deltaTime);
   });
 
   this.callbacks.onElixirChange?.(this.playerElixir);
@@ -1104,11 +1289,27 @@ findBestTargetForTower(tower) {
 damageEntity(entity, amount, isAttackerBlueOrTeam) {
   if (entity.hp <= 0) return;
   const attackerTeam = typeof isAttackerBlueOrTeam === 'string' ? isAttackerBlueOrTeam : (isAttackerBlueOrTeam ? 'blue' : 'red');
+  const isAttackerBlue = attackerTeam === this.playerTeam;
 
   // 檢查塔樓聖盾無敵狀態
   if (entity.isTower) {
     if (entity.isBlue && this.towerShieldTimer.blue > 0) return;
     if (!entity.isBlue && this.towerShieldTimer.red > 0) return;
+
+    // ⚡ 肉鴿聖物：攻城毀滅巨力 (+40% 攻塔傷害)
+    if (isAttackerBlue && this.hasRelic('siege_mastery')) {
+      amount = Math.round(amount * 1.40);
+    }
+  }
+
+  // ⚡ 覺醒進化：不屈聖盾騎士 (正面承受傷害減半 50%)
+  if (entity.cardId === 'knight_evo' || entity.cardId === 'knightevo') {
+    amount = Math.round(amount * 0.50);
+  }
+
+  // ⚡ 覺醒進化：狂化連斬野蠻人 (血量低於 50% 觸發狂暴)
+  if ((entity.cardId === 'barbarians_evo' || entity.cardId === 'barbariansevo') && entity.hp - amount < entity.maxHp * 0.5) {
+    entity.ragedTimer = 99.0;
   }
 
   entity.hp -= amount;

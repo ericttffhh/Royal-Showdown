@@ -231,15 +231,33 @@ export class ModelFactory {
   // TOWERS CREATION (Royal Fortresses)
   // -------------------------------------------------------------
 
-  static createPrincessTower(isBlue) {
+  static createPrincessTower(isBlue, skinId = 'classic') {
     const group = new THREE.Group();
     group.name = 'PrincessTower';
 
-    const stoneMat = getTeamMaterial('stone', isBlue);
-    const darkStoneMat = getTeamMaterial('dark-stone', isBlue);
-    const teamMat = getTeamMaterial('team', isBlue);
-    const goldMat = getTeamMaterial('gold', isBlue);
-    const woodMat = getTeamMaterial('wood', isBlue);
+    let stoneMat = getTeamMaterial('stone', isBlue);
+    let darkStoneMat = getTeamMaterial('dark-stone', isBlue);
+    let teamMat = getTeamMaterial('team', isBlue);
+    let goldMat = getTeamMaterial('gold', isBlue);
+    let woodMat = getTeamMaterial('wood', isBlue);
+
+    // Apply Tower Skin Themes
+    if (skinId === 'inferno') {
+      stoneMat = new THREE.MeshStandardMaterial({ color: 0x221111, roughness: 0.6, metalness: 0.4 });
+      darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x110808, roughness: 0.7 });
+      goldMat = new THREE.MeshStandardMaterial({ color: 0xff3700, emissive: 0xff2200, emissiveIntensity: 1.2, roughness: 0.2 });
+      teamMat = new THREE.MeshStandardMaterial({ color: isBlue ? 0xcc3300 : 0x880000, roughness: 0.4 });
+    } else if (skinId === 'frost') {
+      stoneMat = new THREE.MeshStandardMaterial({ color: 0x5588aa, roughness: 0.3, metalness: 0.3 });
+      darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x1b365d, roughness: 0.4 });
+      goldMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, emissive: 0x00c8ff, emissiveIntensity: 1.4, roughness: 0.1 });
+      teamMat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00bbff : 0x0055aa, roughness: 0.3 });
+    } else if (skinId === 'cyber') {
+      stoneMat = new THREE.MeshStandardMaterial({ color: 0x1a233a, roughness: 0.2, metalness: 0.8 });
+      darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x0b101d, roughness: 0.3, metalness: 0.9 });
+      goldMat = new THREE.MeshStandardMaterial({ color: 0xff00bb, emissive: 0xff00bb, emissiveIntensity: 2.0, roughness: 0.1 });
+      teamMat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00f0ff : 0xff0055, emissive: isBlue ? 0x0088cc : 0xaa0033, emissiveIntensity: 0.6 });
+    }
 
     // Fluted Stone Base
     const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.75, 3.4, 24), stoneMat);
@@ -330,15 +348,33 @@ export class ModelFactory {
     return group;
   }
 
-  static createKingTower(isBlue) {
+  static createKingTower(isBlue, skinId = 'classic') {
     const group = new THREE.Group();
     group.name = 'KingTower';
 
-    const stoneMat = getTeamMaterial('stone', isBlue);
-    const darkStoneMat = getTeamMaterial('dark-stone', isBlue);
-    const teamMat = getTeamMaterial('team', isBlue);
-    const goldMat = getTeamMaterial('gold', isBlue);
-    const woodMat = getTeamMaterial('wood', isBlue);
+    let stoneMat = getTeamMaterial('stone', isBlue);
+    let darkStoneMat = getTeamMaterial('dark-stone', isBlue);
+    let teamMat = getTeamMaterial('team', isBlue);
+    let goldMat = getTeamMaterial('gold', isBlue);
+    let woodMat = getTeamMaterial('wood', isBlue);
+
+    // Apply Tower Skin Themes
+    if (skinId === 'inferno') {
+      stoneMat = new THREE.MeshStandardMaterial({ color: 0x221111, roughness: 0.6, metalness: 0.4 });
+      darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x110808, roughness: 0.7 });
+      goldMat = new THREE.MeshStandardMaterial({ color: 0xff3700, emissive: 0xff2200, emissiveIntensity: 1.2, roughness: 0.2 });
+      teamMat = new THREE.MeshStandardMaterial({ color: isBlue ? 0xcc3300 : 0x880000, roughness: 0.4 });
+    } else if (skinId === 'frost') {
+      stoneMat = new THREE.MeshStandardMaterial({ color: 0x5588aa, roughness: 0.3, metalness: 0.3 });
+      darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x1b365d, roughness: 0.4 });
+      goldMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, emissive: 0x00c8ff, emissiveIntensity: 1.4, roughness: 0.1 });
+      teamMat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00bbff : 0x0055aa, roughness: 0.3 });
+    } else if (skinId === 'cyber') {
+      stoneMat = new THREE.MeshStandardMaterial({ color: 0x1a233a, roughness: 0.2, metalness: 0.8 });
+      darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x0b101d, roughness: 0.3, metalness: 0.9 });
+      goldMat = new THREE.MeshStandardMaterial({ color: 0xff00bb, emissive: 0xff00bb, emissiveIntensity: 2.0, roughness: 0.1 });
+      teamMat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00f0ff : 0xff0055, emissive: isBlue ? 0x0088cc : 0xaa0033, emissiveIntensity: 0.6 });
+    }
 
     // Multi-tier Base Structure
     const baseBottom = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.6, 4.2), darkStoneMat);
@@ -1893,6 +1929,245 @@ export class ModelFactory {
         parts.rightArm = armR;
         parts.weapon = staff;
         break;
+      }
+
+      // =========================================================
+      // 👑 皇室英雄冠軍角色 (Champions)
+      // =========================================================
+
+      case 'goldenknight': {
+        // 🤴 金甲狂劍士 (Golden Knight) - 全身純金鎧甲、飄逸金色長髮、雙肩雄獅金肩甲、流光金聖劍
+        const hairMat = new THREE.MeshStandardMaterial({ color: 0xffdf6d, roughness: 0.3 });
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.28, 0.76, 20), brightGold);
+        body.position.y = 0.76;
+        body.castShadow = true;
+        root.add(body);
+        parts.body = body;
+
+        // 胸甲皇家徽記寶石
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.08), new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00a2ff, emissiveIntensity: 1.5 }));
+        gem.position.set(0, 0.88, 0.3);
+        root.add(gem);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 20, 18), skinMat);
+        head.position.y = 1.28;
+        head.castShadow = true;
+        addCleanStylizedEyes(head, 0.05, 0.12, 0.02, 0.22);
+
+        // 飄逸金髮
+        const hair = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 12), hairMat);
+        hair.position.set(0, 0.05, -0.15);
+        hair.rotation.x = -0.5;
+        head.add(hair);
+
+        // 英雄金冠額帶
+        const headband = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.03, 8, 24), brightGold);
+        headband.rotation.x = Math.PI / 2;
+        headband.position.y = 0.08;
+        head.add(headband);
+
+        root.add(head);
+        parts.head = head;
+
+        // 雙肩黃金獅子肩甲
+        [-0.4, 0.4].forEach(x => {
+          const pad = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), brightGold);
+          pad.position.set(x, 0.95, 0);
+          pad.scale.set(1.2, 0.8, 1);
+          root.add(pad);
+        });
+
+        // 右手神聖金光聖劍
+        const armR = new THREE.Group();
+        armR.position.set(0.42, 0.9, 0);
+        const swordBlade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.04), brightGold);
+        swordBlade.position.set(0, -0.1, 0.3);
+        swordBlade.rotation.x = Math.PI / 4;
+        armR.add(swordBlade);
+        root.add(armR);
+        parts.rightArm = armR;
+        parts.weapon = swordBlade;
+
+        const armL = new THREE.Group();
+        armL.position.set(-0.42, 0.9, 0);
+        const armMeshL = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.42, 14), brightGold);
+        armMeshL.position.y = -0.18;
+        armL.add(armMeshL);
+        root.add(armL);
+        parts.leftArm = armL;
+
+        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.46, 14), brightGold);
+        legL.position.set(-0.15, 0.23, 0);
+        root.add(legL);
+        parts.leftLeg = legL;
+
+        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.46, 14), brightGold);
+        legR.position.set(0.15, 0.23, 0);
+        root.add(legR);
+        parts.rightLeg = legR;
+        break;
+      }
+
+      case 'skeletonking': {
+        // 👑💀 骷髏死靈王者 (Skeleton King) - 巨型骷髏帝皇、紫魂胸爐、王者金冠、死靈骨錘、霸氣猩紅披風
+        const soulMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x9333ea, emissiveIntensity: 2.5 });
+        const capeMat = new THREE.MeshStandardMaterial({ color: 0x7e0825, roughness: 0.6 });
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.32, 0.85, 18), boneMat);
+        body.position.y = 0.85;
+        root.add(body);
+        parts.body = body;
+
+        // 胸前靈魂核心水晶 (聚集亡魂)
+        const soulCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), soulMat);
+        soulCore.position.set(0, 0.95, 0.32);
+        root.add(soulCore);
+
+        // 骷髏頭骨
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.46, 0.42), boneMat);
+        head.position.y = 1.5;
+        // 幽冥紫光雙眼
+        [-0.12, 0.12].forEach(x => {
+          const eye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), soulMat);
+          eye.position.set(x, 0.04, 0.22);
+          head.add(eye);
+        });
+
+        // 王者骨皇金冠
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.22, 6), brightGold);
+        crown.position.y = 0.32;
+        head.add(crown);
+        root.add(head);
+        parts.head = head;
+
+        // 霸氣紅披風
+        const cape = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.1, 0.06), capeMat);
+        cape.position.set(0, 0.9, -0.25);
+        cape.rotation.x = 0.12;
+        root.add(cape);
+
+        // 右手死靈戰槌
+        const armR = new THREE.Group();
+        armR.position.set(0.52, 1.05, 0);
+        const maceShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.35, 12), blackIron);
+        maceShaft.position.set(0, 0.1, 0.35);
+        maceShaft.rotation.x = Math.PI / 4;
+        const maceHead = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), soulMat);
+        maceHead.position.set(0, 0.65, 0);
+        maceShaft.add(maceHead);
+        armR.add(maceShaft);
+        root.add(armR);
+        parts.rightArm = armR;
+        parts.weapon = maceShaft;
+
+        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.5, 12), boneMat);
+        legL.position.set(-0.18, 0.25, 0);
+        root.add(legL);
+        parts.leftLeg = legL;
+
+        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.5, 12), boneMat);
+        legR.position.set(0.18, 0.25, 0);
+        root.add(legR);
+        parts.rightLeg = legR;
+        break;
+      }
+
+      case 'archerqueen': {
+        // 👸🏹 幻影隱匿弓皇 (Archer Queen) - 翡翠長裙、精靈金冠、重裝神射連弩、隱匿幻影披肩
+        const dressMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.4 });
+        const capeMat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.5 });
+        const xbowMat = new THREE.MeshStandardMaterial({ color: 0x3b2111, metalness: 0.6, roughness: 0.3 });
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.32, 0.74, 18), dressMat);
+        body.position.y = 0.72;
+        root.add(body);
+        parts.body = body;
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 20, 18), skinMat);
+        head.position.y = 1.22;
+        addCleanStylizedEyes(head, 0.05, 0.11, 0.02, 0.21);
+
+        // 精靈皇冠
+        const tiara = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.25, 5), brightGold);
+        tiara.position.y = 0.22;
+        head.add(tiara);
+        root.add(head);
+        parts.head = head;
+
+        // 幻影披肩
+        const cloak = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.85, 0.05), capeMat);
+        cloak.position.set(0, 0.75, -0.18);
+        root.add(cloak);
+
+        // 重型改良連弩
+        const armR = new THREE.Group();
+        armR.position.set(0.38, 0.85, 0);
+        const xbow = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.55), xbowMat);
+        xbow.position.set(0, 0, 0.3);
+        const xbowBow = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.03, 8, 20, Math.PI), brightGold);
+        xbowBow.rotation.x = Math.PI / 2;
+        xbowBow.position.set(0, 0, 0.26);
+        xbow.add(xbowBow);
+        armR.add(xbow);
+        root.add(armR);
+        parts.rightArm = armR;
+        parts.weapon = xbow;
+
+        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.42, 12), dressMat);
+        legL.position.set(-0.12, 0.21, 0);
+        root.add(legL);
+        parts.leftLeg = legL;
+
+        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.42, 12), dressMat);
+        legR.position.set(0.12, 0.21, 0);
+        root.add(legR);
+        parts.rightLeg = legR;
+        break;
+      }
+
+      // =========================================================
+      // ⚡ 卡牌覺醒進化形態 (Evolutions)
+      // =========================================================
+
+      case 'wizard_evo':
+      case 'wizardevo': {
+        const evoMesh = ModelFactory.createTroopMesh('wizard', isBlue);
+        // Add mystical cosmic rings around the wizard
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.04, 12, 32), new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0xc084fc, emissiveIntensity: 3.0 }));
+        halo.rotation.x = Math.PI / 2;
+        halo.position.y = 1.35;
+        evoMesh.root.add(halo);
+        return evoMesh;
+      }
+
+      case 'knight_evo':
+      case 'knightevo': {
+        const evoMesh = ModelFactory.createTroopMesh('knight', isBlue);
+        // Add giant glowing holy shield
+        const energyShield = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.05), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 2.0, transparent: true, opacity: 0.85 }));
+        energyShield.position.set(-0.35, 0.85, 0.35);
+        evoMesh.root.add(energyShield);
+        return evoMesh;
+      }
+
+      case 'archers_evo':
+      case 'archersevo': {
+        const evoMesh = ModelFactory.createTroopMesh('archers', isBlue);
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.03, 8, 24), new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 2.5 }));
+        halo.position.y = 1.35;
+        evoMesh.root.add(halo);
+        return evoMesh;
+      }
+
+      case 'barbarians_evo':
+      case 'barbariansevo': {
+        const evoMesh = ModelFactory.createTroopMesh('goblins', isBlue);
+        const rageRing = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xdb2777, emissiveIntensity: 2.5, side: THREE.DoubleSide }));
+        rageRing.rotation.x = -Math.PI / 2;
+        rageRing.position.y = 0.05;
+        evoMesh.root.add(rageRing);
+        return evoMesh;
       }
 
       default: {

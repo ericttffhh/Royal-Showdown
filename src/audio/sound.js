@@ -503,11 +503,132 @@ class SoundEngine {
     });
   }
 
-  playDefeat() {
-    if (!this.enabled) return;
-    const notes = [440, 415, 392, 349];
+  // --- 🎙️ 角色專屬語音咆哮與口頭禪 (Original Vocal & Voice Synthesizer) ---
+  playVoice(cardId) {
+    if (!this.enabled || !this.ctx) return;
+    this.ensureContext();
+
+    switch (cardId) {
+      case 'hogrider':
+        // 經典高昂野豬騎士戰吼: "Hooog Riiideeeer!"
+        [
+          { f: 420, t: 0.18, type: 'sawtooth', gain: 0.35 },
+          { f: 650, t: 0.22, type: 'sawtooth', gain: 0.4 },
+          { f: 880, t: 0.35, type: 'triangle', gain: 0.45 },
+          { f: 720, t: 0.28, type: 'sine', gain: 0.3 }
+        ].forEach((v, idx) => {
+          setTimeout(() => this.playTone(v.f, v.f * 1.05, v.t, v.type, v.gain), idx * 140);
+        });
+        break;
+
+      case 'wizard':
+        // 魔法師詠唱語音: "Magic / Fireball!"
+        [
+          { f: 700, t: 0.15, type: 'sine', gain: 0.3 },
+          { f: 950, t: 0.18, type: 'triangle', gain: 0.35 },
+          { f: 1200, t: 0.25, type: 'sawtooth', gain: 0.3 }
+        ].forEach((v, idx) => {
+          setTimeout(() => this.playTone(v.f, v.f * 0.9, v.t, v.type, v.gain), idx * 110);
+        });
+        break;
+
+      case 'pekka':
+        // 皮卡超人機械重低音重吼: "P.E.K.K.A / Butterflies"
+        [
+          { f: 120, t: 0.25, type: 'sawtooth', gain: 0.5 },
+          { f: 95, t: 0.3, type: 'square', gain: 0.45 },
+          { f: 75, t: 0.4, type: 'sawtooth', gain: 0.5 }
+        ].forEach((v, idx) => {
+          setTimeout(() => this.playTone(v.f, v.f * 0.9, v.t, v.type, v.gain), idx * 180);
+        });
+        break;
+
+      case 'golden_knight':
+        // 金甲狂劍士英雄豪邁斬吼: "Golden Power!"
+        [
+          { f: 520, t: 0.14, type: 'triangle', gain: 0.38 },
+          { f: 780, t: 0.18, type: 'sawtooth', gain: 0.42 },
+          { f: 1040, t: 0.3, type: 'sawtooth', gain: 0.4 }
+        ].forEach((v, idx) => {
+          setTimeout(() => this.playTone(v.f, v.f * 1.08, v.t, v.type, v.gain), idx * 120);
+        });
+        break;
+
+      case 'skeleton_king':
+        // 骷髏死靈王者冥界長嘯: "Rise, my army!"
+        [
+          { f: 180, t: 0.22, type: 'sawtooth', gain: 0.4 },
+          { f: 140, t: 0.25, type: 'triangle', gain: 0.42 },
+          { f: 220, t: 0.35, type: 'sine', gain: 0.38 }
+        ].forEach((v, idx) => {
+          setTimeout(() => this.playTone(v.f, v.f * 0.85, v.t, v.type, v.gain), idx * 150);
+        });
+        break;
+
+      case 'archer_queen':
+        // 隱匿弓皇輕語神射: "Bullseye!"
+        [
+          { f: 880, t: 0.12, type: 'sine', gain: 0.3 },
+          { f: 1320, t: 0.15, type: 'triangle', gain: 0.35 },
+          { f: 1760, t: 0.22, type: 'sine', gain: 0.28 }
+        ].forEach((v, idx) => {
+          setTimeout(() => this.playTone(v.f, v.f * 1.02, v.t, v.type, v.gain), idx * 90);
+        });
+        break;
+
+      default:
+        // 通用士兵出戰號角呼喝
+        this.playTone(380, 520, 0.12, 'triangle', 0.22);
+        break;
+    }
+  }
+
+  // 英雄主動技能震撼音效
+  playChampionAbility(abilityId) {
+    if (!this.enabled || !this.ctx) return;
+    this.ensureContext();
+
+    if (abilityId === 'dash_strike') {
+      // 金光疾風連斬 (極速電光突刺 6 連音)
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          this.playTone(900 + i * 180, 400 + i * 100, 0.08, 'sawtooth', 0.3);
+          this.playSwordHit();
+        }, i * 65);
+      }
+    } else if (abilityId === 'soul_summon') {
+      // 亡靈召喚 (冥界暗黑能量爆發 + 骷髏海破土)
+      this.playTone(150, 60, 0.6, 'sawtooth', 0.45);
+      setTimeout(() => this.playMagicCast(), 100);
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => this.playSpawn('skeletons'), 120 + i * 70);
+      }
+    } else if (abilityId === 'cloak_shot') {
+      // 隱匿神速連弩 (迷霧消隱 + 高頻連弩連發)
+      this.playTone(1800, 200, 0.3, 'sine', 0.35);
+      for (let i = 0; i < 8; i++) {
+        setTimeout(() => this.playBowShot(), 80 + i * 85);
+      }
+    }
+  }
+
+  // 卡牌覺醒進化啟動音效 (Hypercharge Surge)
+  playEvoTrigger() {
+    if (!this.enabled || !this.ctx) return;
+    const chords = [392, 523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
+    chords.forEach((freq, idx) => {
+      setTimeout(() => {
+        this.playTone(freq, freq * 1.1, 0.25, 'sawtooth', 0.32);
+      }, idx * 50);
+    });
+  }
+
+  // 肉鴿地牢獲得神聖聖物音效
+  playRelicAcquire() {
+    if (!this.enabled || !this.ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
     notes.forEach((f, i) => {
-      setTimeout(() => this.playTone(f, f * 0.95, 0.4, 'sawtooth', 0.32), i * 300);
+      setTimeout(() => this.playTone(f, f, 0.3, 'sine', 0.35), i * 80);
     });
   }
 }

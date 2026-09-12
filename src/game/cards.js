@@ -6,7 +6,8 @@ export const RARITY = {
   COMMON: { id: 'common', name: '普通', color: '#9bb0c8', bg: '#2b3952' },
   RARE: { id: 'rare', name: '稀有', color: '#ff9924', bg: '#4a2c00' },
   EPIC: { id: 'epic', name: '史詩', color: '#c42eff', bg: '#3e085c' },
-  LEGENDARY: { id: 'legendary', name: '傳奇', color: '#00ffc4', bg: '#004a3e' }
+  LEGENDARY: { id: 'legendary', name: '傳奇', color: '#00ffc4', bg: '#004a3e' },
+  CHAMPION: { id: 'champion', name: '英雄', color: '#ffd700', bg: '#593800' }
 };
 
 export const CARDS = {
@@ -389,8 +390,289 @@ export const CARDS = {
     flying: true,
     radius: 0.65,
     mass: 1.4
+  },
+
+  // === 👑 皇室英雄冠軍卡牌 (Champions with Active Abilities) ===
+
+  golden_knight: {
+    id: 'golden_knight',
+    name: '金甲狂劍士',
+    cost: 4,
+    type: 'troop',
+    rarity: 'champion',
+    icon: '🤴',
+    isChampion: true,
+    description: '身穿純金戰甲的尊貴英雄！能發動【金光疾風連斬】，連續突進瞬殺周遭多個敵軍單位！',
+    count: 1,
+    hp: 1800,
+    damage: 210,
+    hitSpeed: 0.9,
+    speed: 1.4,
+    range: 0.8,
+    targets: 'ground',
+    flying: false,
+    radius: 0.55,
+    mass: 1.6,
+    ability: {
+      id: 'dash_strike',
+      name: '金光疾風連斬',
+      icon: '⚡',
+      cost: 1,
+      cooldown: 12,
+      dashes: 6,
+      damage: 320,
+      description: '消耗 1 聖水，化作金色電光向最多 6 個敵方目標發動高速連環突刺！'
+    }
+  },
+
+  skeleton_king: {
+    id: 'skeleton_king',
+    name: '骷髏死靈王者',
+    cost: 4,
+    type: 'troop',
+    rarity: 'champion',
+    icon: '👑💀',
+    isChampion: true,
+    description: '冥界骷髏霸主！在戰場上收集逝去亡魂，並能施展【靈魂亡靈召喚】呼喚亡者骷髏大軍！',
+    count: 1,
+    hp: 2300,
+    damage: 205,
+    hitSpeed: 1.6,
+    speed: 1.1,
+    range: 1.0,
+    splashRadius: 1.5,
+    targets: 'ground',
+    flying: false,
+    radius: 0.7,
+    mass: 2.5,
+    ability: {
+      id: 'soul_summon',
+      name: '亡靈亡者召喚',
+      icon: '💀✨',
+      cost: 2,
+      cooldown: 15,
+      description: '消耗 2 聖水，在周圍瞬間召喚 8 隻受靈魂庇護的狂暴骷髏親衛隊！'
+    }
+  },
+
+  archer_queen: {
+    id: 'archer_queen',
+    name: '幻影隱匿弓皇',
+    cost: 5,
+    type: 'troop',
+    rarity: 'champion',
+    icon: '👸🏹',
+    isChampion: true,
+    description: '手持改良連弩的精靈女皇！發動【隱形神速連弩】可進入完全隱形狀態並以 300% 射速狂射！',
+    count: 1,
+    hp: 1000,
+    damage: 230,
+    hitSpeed: 1.2,
+    speed: 1.2,
+    range: 5.5,
+    targets: 'all',
+    flying: false,
+    radius: 0.45,
+    mass: 0.9,
+    ability: {
+      id: 'cloak_shot',
+      name: '隱匿神速連弩',
+      icon: '👁️‍🗨️',
+      cost: 1,
+      cooldown: 14,
+      duration: 3.5,
+      speedMultiplier: 3.0,
+      description: '消耗 1 聖水，進入 3.5 秒隱形狀態免疫鎖定，並獲得 +200% 攻擊射速！'
+    }
   }
 };
+
+// === ⚡ 卡牌覺醒進化系統 (Card Evolutions / Hypercharge) ===
+export const CARD_EVOLUTIONS = {
+  barbarians: {
+    baseCardId: 'goblins', // 適用於近戰兵團或替代
+    evoId: 'barbarians_evo',
+    name: '狂化連斬野蠻人',
+    icon: '⚡🗡️',
+    cycleNeeded: 1,
+    statBonus: { hpMult: 1.3, dmgMult: 1.25, speedMult: 1.2 },
+    description: '每使用 1 次啟動覺醒！生命值低於 50% 時進入狂暴狀態，攻速暴增 +60%！'
+  },
+  wizard: {
+    baseCardId: 'wizard',
+    evoId: 'wizard_evo',
+    name: '混沌天火大法師',
+    icon: '⚡🧙‍♂️',
+    cycleNeeded: 1,
+    statBonus: { hpMult: 1.2, dmgMult: 1.3, splashMult: 1.5 },
+    description: '每使用 1 次啟動覺醒！每次火球爆炸引發環形衝擊波，擊退敵軍並附帶持續燃燒！'
+  },
+  archers: {
+    baseCardId: 'archers',
+    evoId: 'archers_evo',
+    name: '致命精準獵殺弓手',
+    icon: '⚡🏹',
+    cycleNeeded: 2,
+    statBonus: { hpMult: 1.2, dmgMult: 1.4, rangeMult: 1.25 },
+    description: '每使用 2 次啟動覺醒！射程提升至 6.5 格，且每一箭皆具備貫穿直線所有敵人的穿透神箭！'
+  },
+  knight: {
+    baseCardId: 'knight',
+    evoId: 'knight_evo',
+    name: '不屈聖盾重裝騎士',
+    icon: '⚡🛡️',
+    cycleNeeded: 2,
+    statBonus: { hpMult: 1.35, dmgMult: 1.15 },
+    description: '每使用 2 次啟動覺醒！前方展開不屈力場聖盾，承受所有遠程與正面傷害降低 50%！'
+  }
+};
+
+// === 🏰 防禦塔 3D 造型系統 (Tower Skins) ===
+export const TOWER_SKINS = {
+  classic: {
+    id: 'classic',
+    name: '經典皇家金冠塔',
+    icon: '🏰',
+    colorTheme: { base: 0x2255aa, crown: 0xffd700, stone: 0x8899aa, roof: 0xcc2222 },
+    costGems: 0,
+    reqTrophies: 0,
+    description: '承襲百年皇家正統工藝的經典石砌金頂城堡。'
+  },
+  inferno: {
+    id: 'inferno',
+    name: '熔岩地獄黑曜塔',
+    icon: '🌋',
+    colorTheme: { base: 0x221111, crown: 0xff4500, stone: 0x3a1a1a, roof: 0xff2200 },
+    costGems: 500,
+    reqTrophies: 1500,
+    description: '由地底黑曜石與永恆熔火鍛造，散發熾熱的毀滅氣息！'
+  },
+  frost: {
+    id: 'frost',
+    name: '極寒冰霜水晶塔',
+    icon: '🧊',
+    colorTheme: { base: 0x113355, crown: 0x00ffff, stone: 0x5588bb, roof: 0x00ccff },
+    costGems: 800,
+    reqTrophies: 2500,
+    description: '終年被萬年極冰籠罩，周圍環繞璀璨冰晶與寒霧！'
+  },
+  cyber: {
+    id: 'cyber',
+    name: '霓虹賽博未來塔',
+    icon: '🏙️',
+    colorTheme: { base: 0x0a0f1d, crown: 0xff00ff, stone: 0x1a2536, roof: 0x00f3ff },
+    costGems: 1200,
+    reqTrophies: 3500,
+    description: '來自 2077 年的賽博全息矩陣要塞，閃耀動態霓虹光環！'
+  }
+};
+
+// === 🏟️ 3D 主題戰鬥競技場 (Themed 3D Arenas) ===
+export const ARENA_THEMES = {
+  royal_valley: {
+    id: 'royal_valley',
+    name: '皇家河谷',
+    icon: '🌱',
+    groundColor: 0x3d7e35,
+    riverColor: 0x1a73e8,
+    bridgeColor: 0x8d6e63,
+    fogColor: 0x64b5f6,
+    ambientLight: 0xffffff,
+    dirLight: 0xfffaed,
+    description: '綠意盎然的皇家正統對決河谷，流水潺潺。'
+  },
+  inferno_abyss: {
+    id: 'inferno_abyss',
+    name: '熔岩深淵',
+    icon: '🌋',
+    groundColor: 0x241715,
+    riverColor: 0xff4500,
+    bridgeColor: 0x4a2820,
+    fogColor: 0xff3300,
+    ambientLight: 0xff8866,
+    dirLight: 0xff4411,
+    particles: 'magma',
+    description: '地獄裂谷熔岩四溢，火山灰與熾熱火星在空氣中燃燒！'
+  },
+  frozen_peak: {
+    id: 'frozen_peak',
+    name: '極地冰嶺',
+    icon: '❄️',
+    groundColor: 0xd8e8f5,
+    riverColor: 0x00d2ff,
+    bridgeColor: 0x90a4ae,
+    fogColor: 0xb0e0e6,
+    ambientLight: 0xccf0ff,
+    dirLight: 0xddf4ff,
+    particles: 'snow',
+    description: '暴風雪肆虐的高海拔極峰，冰川晶瑩剔透！'
+  }
+};
+
+// === 🧗 肉鴿地下城試煉塔 (Roguelike Dungeon Gauntlet) ===
+export const DUNGEON_RELICS = {
+  elixir_spring: {
+    id: 'elixir_spring',
+    name: '永恆聖水靈泉',
+    icon: '💧',
+    desc: '戰鬥中聖水恢復速度永久提升 +25%',
+    type: 'elixir_speed',
+    value: 1.25
+  },
+  vampiric_edge: {
+    id: 'vampiric_edge',
+    name: '嗜血吸魂魔刃',
+    icon: '🩸',
+    desc: '所有友軍部隊造成傷害時吸取 15% 生命值',
+    type: 'lifesteal',
+    value: 0.15
+  },
+  iron_skin: {
+    id: 'iron_skin',
+    name: '泰坦不滅鋼甲',
+    icon: '🛡️',
+    desc: '所有部隊最大生命值提升 +30%',
+    type: 'hp_boost',
+    value: 1.30
+  },
+  thunder_strike: {
+    id: 'thunder_strike',
+    name: '雷霆降世天譴',
+    icon: '⚡',
+    desc: '每次下兵時，天降一道閃電劈擊最近的敵軍 (200 傷害)',
+    type: 'spawn_bolt',
+    value: 200
+  },
+  siege_mastery: {
+    id: 'siege_mastery',
+    name: '攻城毀滅巨力',
+    icon: '💥',
+    desc: '部隊對防禦塔與皇家建築的傷害提升 +40%',
+    type: 'crown_dmg',
+    value: 1.40
+  },
+  chrono_haste: {
+    id: 'chrono_haste',
+    name: '時空疾速印記',
+    icon: '🌀',
+    desc: '所有友軍移動與攻擊速度額外提升 +25%',
+    type: 'haste',
+    value: 1.25
+  }
+};
+
+export const DUNGEON_FLOORS = [
+  { floor: 1, name: '初探地牢迷宮', enemyDeck: ['knight', 'archers', 'goblins'], enemyElixirRate: 1.0, towerHpMult: 0.8, bossName: null, rewardGold: 300, rewardGems: 15 },
+  { floor: 2, name: '哥布林強盜窩', enemyDeck: ['goblins', 'goblinhut', 'archers', 'fireball'], enemyElixirRate: 1.1, towerHpMult: 0.9, bossName: null, rewardGold: 450, rewardGems: 20 },
+  { floor: 3, name: '骷髏墓穴守衛', enemyDeck: ['skeletons', 'knight', 'wizard', 'arrows'], enemyElixirRate: 1.15, towerHpMult: 1.0, bossName: '💀 墓穴大領主', rewardGold: 600, rewardGems: 25 },
+  { floor: 4, name: '極寒冰封迴廊', enemyDeck: ['wizard', 'dragon', 'freeze', 'knight'], enemyElixirRate: 1.2, towerHpMult: 1.05, bossName: null, rewardGold: 800, rewardGems: 30 },
+  { floor: 5, name: '狂暴野蠻人要塞', enemyDeck: ['hogrider', 'rage', 'pekka', 'musketeer'], enemyElixirRate: 1.25, towerHpMult: 1.1, bossName: '🐗 狂怒野豬之王', rewardGold: 1000, rewardGems: 40 },
+  { floor: 6, name: '熔岩地獄煉獄', enemyDeck: ['inferno', 'dragon', 'fireball', 'giant'], enemyElixirRate: 1.3, towerHpMult: 1.15, bossName: null, rewardGold: 1250, rewardGems: 50 },
+  { floor: 7, name: '雷霆電磁工坊', enemyDeck: ['thunder_valkyrie', 'musketeer', 'pekka', 'rage'], enemyElixirRate: 1.35, towerHpMult: 1.2, bossName: '⚡ 雷霆統帥', rewardGold: 1500, rewardGems: 60 },
+  { floor: 8, name: '暗夜忍者密林', enemyDeck: ['cyber_ninja', 'golden_knight', 'archers', 'fireball'], enemyElixirRate: 1.4, towerHpMult: 1.25, bossName: null, rewardGold: 1800, rewardGems: 70 },
+  { floor: 9, name: '不死鳥炎王神殿', enemyDeck: ['phoenix_mage', 'skeleton_king', 'mecha_golem', 'freeze'], enemyElixirRate: 1.45, towerHpMult: 1.3, bossName: '🦅 涅槃炎帝', rewardGold: 2200, rewardGems: 90 },
+  { floor: 10, name: '深淵終焉 · 萬惡魔神殿', enemyDeck: ['mecha_golem', 'pekka', 'phoenix_mage', 'thunder_valkyrie', 'inferno', 'fireball'], enemyElixirRate: 1.6, towerHpMult: 1.5, bossName: '👹 萬惡魔神泰坦 (終極BOSS)', rewardGold: 5000, rewardGems: 300, rewardChest: 'legendary' }
+];
 
 // 國王主動英雄技能
 export const KING_POWERS = {

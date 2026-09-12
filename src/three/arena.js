@@ -141,27 +141,65 @@ export class Arena3D {
     this.classicGroup.add(riverLight);
   }
 
-  createProceduralFieldTexture() {
+  createProceduralFieldTexture(theme = 'royal_valley') {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 2048;
     const ctx = canvas.getContext('2d');
 
-    // Base Grass Gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, 2048);
-    grad.addColorStop(0, '#3a6828');    // Red territory darker verdant
-    grad.addColorStop(0.48, '#447d30'); // River border north
-    grad.addColorStop(0.52, '#458231'); // River border south
-    grad.addColorStop(1, '#4c8a37');    // Blue territory lush emerald
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1024, 2048);
+    if (theme === 'inferno_abyss') {
+      // Volcanic Magma Ash & Obsidian
+      const grad = ctx.createLinearGradient(0, 0, 0, 2048);
+      grad.addColorStop(0, '#1c0f0d');
+      grad.addColorStop(0.48, '#3d1610');
+      grad.addColorStop(0.52, '#3d1610');
+      grad.addColorStop(1, '#24100c');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1024, 2048);
 
-    // Checkerboard Lawn Stripes
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-    const stripeCount = 28;
-    const stripeHeight = 2048 / stripeCount;
-    for (let i = 0; i < stripeCount; i += 2) {
-      ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight);
+      // Magma cracks glow
+      ctx.strokeStyle = 'rgba(255, 69, 0, 0.25)';
+      ctx.lineWidth = 6;
+      for (let i = 0; i < 15; i++) {
+        ctx.beginPath();
+        ctx.moveTo(Math.random() * 1024, Math.random() * 2048);
+        ctx.lineTo(Math.random() * 1024, Math.random() * 2048);
+        ctx.stroke();
+      }
+    } else if (theme === 'frozen_peak') {
+      // Glacier Snow & Polar Ice
+      const grad = ctx.createLinearGradient(0, 0, 0, 2048);
+      grad.addColorStop(0, '#b8d8f0');
+      grad.addColorStop(0.48, '#e3f2fd');
+      grad.addColorStop(0.52, '#e3f2fd');
+      grad.addColorStop(1, '#cce5f7');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1024, 2048);
+
+      // Ice Frost Lines
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      const stripeCount = 28;
+      const stripeHeight = 2048 / stripeCount;
+      for (let i = 0; i < stripeCount; i += 2) {
+        ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight);
+      }
+    } else {
+      // Default Royal Valley Base Grass Gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, 2048);
+      grad.addColorStop(0, '#3a6828');    // Red territory darker verdant
+      grad.addColorStop(0.48, '#447d30'); // River border north
+      grad.addColorStop(0.52, '#458231'); // River border south
+      grad.addColorStop(1, '#4c8a37');    // Blue territory lush emerald
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1024, 2048);
+
+      // Checkerboard Lawn Stripes
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      const stripeCount = 28;
+      const stripeHeight = 2048 / stripeCount;
+      for (let i = 0; i < stripeCount; i += 2) {
+        ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight);
+      }
     }
 
     // Cobblestone Stone Paths to Bridges
@@ -203,6 +241,36 @@ export class Arena3D {
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
     return texture;
+  }
+
+  setArenaTheme(themeId = 'royal_valley') {
+    this.currentThemeId = themeId;
+    if (this.groundPlane) {
+      this.groundPlane.material.map = this.createProceduralFieldTexture(themeId);
+      this.groundPlane.material.needsUpdate = true;
+    }
+
+    if (this.waterMesh) {
+      if (themeId === 'inferno_abyss') {
+        this.waterMesh.material.color.setHex(0xff3300);
+        this.waterMesh.material.emissive.setHex(0xff2200);
+        this.waterMesh.material.emissiveIntensity = 1.6;
+        if (this.scene.fog) this.scene.fog.color.setHex(0x280b06);
+        this.scene.background.setHex(0x180503);
+      } else if (themeId === 'frozen_peak') {
+        this.waterMesh.material.color.setHex(0x00e5ff);
+        this.waterMesh.material.emissive.setHex(0x0088cc);
+        this.waterMesh.material.emissiveIntensity = 0.8;
+        if (this.scene.fog) this.scene.fog.color.setHex(0x102438);
+        this.scene.background.setHex(0x0a1624);
+      } else {
+        this.waterMesh.material.color.setHex(0x1292e8);
+        this.waterMesh.material.emissive.setHex(0x073b66);
+        this.waterMesh.material.emissiveIntensity = 0.25;
+        if (this.scene.fog) this.scene.fog.color.setHex(0x0a1428);
+        this.scene.background.setHex(0x0a1428);
+      }
+    }
   }
 
   buildTerrain() {

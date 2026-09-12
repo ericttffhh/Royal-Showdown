@@ -1,5 +1,5 @@
 import confetti from 'canvas-confetti';
-import { CARDS, CHESTS, TROPHY_ROAD, ROYALE_PASS_TIERS, SEVEN_DAY_REWARDS, ACHIEVEMENTS, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelTitle, getPlayerLevelReward } from '../game/cards.js';
+import { CARDS, CHESTS, TROPHY_ROAD, ROYALE_PASS_TIERS, SEVEN_DAY_REWARDS, ACHIEVEMENTS, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelTitle, getPlayerLevelReward, DUNGEON_FLOORS, DUNGEON_RELICS, TOWER_SKINS, ARENA_THEMES } from '../game/cards.js';
 import { inventory } from '../game/inventory.js';
 import { auth, AVATAR_OPTIONS } from '../game/auth.js';
 import { sounds } from '../audio/sound.js';
@@ -14,12 +14,21 @@ import { presenceTracker } from '../game/cloud.js';
 export class MenuUI {
   constructor(callbacks = {}) {
     this.callbacks = callbacks;
-    // callbacks: { onStartAI, onStartBoss, onStart7X, onStartDraft, onStartPvE, onStartOnline, onStartLocal, onSendEmote, onRematch, onReturnToMenu, onTriggerKingPower, onToggleCamera }
+    // callbacks: { onStartAI, onStartBoss, onStart7X, onStartDraft, onStartPvE, onStartOnline, onStartLocal, onSendEmote, onRematch, onReturnToMenu, onTriggerKingPower, onToggleCamera, onStartDungeon, onTriggerChampionAbility, onThemeChanged }
 
     this.selectedDifficulty = 'medium';
     this.gachaManager = null;
     this.deckBuilder = null;
     this.selectedSignupAvatar = '👑';
+
+    // 🧗 肉鴿地下城狀態
+    this.currentDungeonFloor = 1;
+    this.dungeonRelics = [];
+    this.selectedDungeonFloor = 1;
+
+    // 🏰 造型與競技場主題
+    this.selectedTowerSkin = inventory.data?.selectedTowerSkin || 'classic';
+    this.selectedArenaTheme = inventory.data?.selectedArenaTheme || 'royal_valley';
 
     // Draft Picking State
     this.draftRound = 1;
@@ -30,6 +39,7 @@ export class MenuUI {
     this.initElements();
     this.initManagers();
     this.setupListeners();
+    this.setupDungeonAndSkinsListeners();
     this.renderAvatarPicker();
     this.populateCardsWiki();
     this.updateCurrencyUI();
@@ -2906,6 +2916,326 @@ export class MenuUI {
       this.updateCurrencyUI();
       this.openLuckyWheel();
     }, 4600);
+  }
+
+  // =========================================================
+  // 🧗 肉鴿地下城試煉塔 (Dungeon Gauntlet UI Manager)
+  // =========================================================
+
+  setupDungeonAndSkinsListeners() {
+    // Dungeon Modal Open / Close
+    document.getElementById('btn-open-dungeon')?.addEventListener('click', () => {
+      this.openDungeonModal();
+    });
+
+    document.getElementById('btn-close-dungeon')?.addEventListener('click', () => {
+      document.getElementById('dungeon-modal')?.classList.add('hidden');
+      this.menuOverlay.classList.remove('hidden');
+    });
+
+    document.getElementById('btn-start-dungeon-floor')?.addEventListener('click', () => {
+      this.startSelectedDungeonFloor();
+    });
+
+    // Tower Skins & Arenas Modal Open / Close
+    document.getElementById('btn-open-tower-skins')?.addEventListener('click', () => {
+      this.openTowerSkinsModal();
+    });
+
+    document.getElementById('btn-close-tower-skins')?.addEventListener('click', () => {
+      document.getElementById('tower-skins-modal')?.classList.add('hidden');
+      this.menuOverlay.classList.remove('hidden');
+    });
+
+    // Champion Ability Button in Battle Dock
+    document.getElementById('champion-ability-btn')?.addEventListener('click', () => {
+      this.callbacks.onTriggerChampionAbility?.();
+    });
+  }
+
+  openDungeonModal() {
+    this.menuOverlay.classList.add('hidden');
+    const modal = document.getElementById('dungeon-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    this.renderDungeonRelicsTray();
+    this.renderDungeonFloors();
+  }
+
+  renderDungeonRelicsTray() {
+    const listEl = document.getElementById('dungeon-relics-list');
+    const countEl = document.getElementById('relics-count');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = this.dungeonRelics.length;
+    listEl.innerHTML = '';
+
+    if (this.dungeonRelics.length === 0) {
+      listEl.innerHTML = '<span class="empty-relic-hint">尚無聖物，挑戰通關獲取強力被動！</span>';
+      return;
+    }
+
+    this.dungeonRelics.forEach(relicId => {
+      const relic = DUNGEON_RELICS[relicId];
+      if (!relic) return;
+      const item = document.createElement('div');
+      item.className = 'relic-badge-tag';
+      item.innerHTML = `<span>${relic.icon}</span> <strong>${relic.name}</strong>`;
+      item.title = relic.desc;
+      listEl.appendChild(item);
+    });
+  }
+
+  renderDungeonFloors() {
+    const container = document.getElementById('dungeon-floors-container');
+    const statusText = document.getElementById('dungeon-status-text');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (statusText) {
+      statusText.textContent = `當前進度：第 ${this.currentDungeonFloor} 層 / 共 10 層`;
+    }
+
+    DUNGEON_FLOORS.forEach(floor => {
+      const isCleared = floor.floor < this.currentDungeonFloor;
+      const isCurrent = floor.floor === this.currentDungeonFloor;
+      const isLocked = floor.floor > this.currentDungeonFloor;
+
+      const card = document.createElement('div');
+      card.className = `dungeon-floor-card ${isCleared ? 'cleared' : ''} ${isCurrent ? 'current' : ''} ${isLocked ? 'locked' : ''}`;
+      
+      let stateBadge = isCleared ? '✅ 已通關' : (isCurrent ? '⚔️ 當前挑戰' : '🔒 未解鎖');
+      let bossHtml = floor.bossName ? `<div class="floor-boss-name">${floor.bossName}</div>` : '';
+
+      card.innerHTML = `
+        <div class="floor-num-badge">FLOOR ${floor.floor}</div>
+        <strong style="font-size: 13px; color: #f8fafc;">${floor.name}</strong>
+        ${bossHtml}
+        <div class="floor-reward-box">🪙 +${floor.rewardGold} | 💎 +${floor.rewardGems}</div>
+        <div style="margin-top: 8px; font-size: 11px; font-weight: 800; color: ${isCleared ? '#10b981' : (isCurrent ? '#ffd700' : '#64748b')}">${stateBadge}</div>
+      `;
+
+      if (!isLocked) {
+        card.addEventListener('click', () => {
+          this.selectedDungeonFloor = floor.floor;
+          document.querySelectorAll('.dungeon-floor-card').forEach(c => c.classList.remove('current'));
+          card.classList.add('current');
+          if (statusText) statusText.textContent = `已選中：第 ${floor.floor} 層 (${floor.name})`;
+        });
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  startSelectedDungeonFloor() {
+    const floorIndex = (this.selectedDungeonFloor || this.currentDungeonFloor) - 1;
+    const floorData = DUNGEON_FLOORS[floorIndex] || DUNGEON_FLOORS[0];
+
+    document.getElementById('dungeon-modal')?.classList.add('hidden');
+    sounds.playTone(523, 783, 0.3, 'sawtooth');
+    this.callbacks.onStartDungeon?.(floorData, this.dungeonRelics);
+  }
+
+  onDungeonFloorVictory() {
+    const clearedFloor = this.currentDungeonFloor;
+    const floorData = DUNGEON_FLOORS[clearedFloor - 1];
+
+    if (floorData) {
+      inventory.addGold(floorData.rewardGold || 300);
+      inventory.addGems(floorData.rewardGems || 15);
+      if (floorData.rewardChest && this.gachaManager) {
+        setTimeout(() => this.gachaManager.startOpening(floorData.rewardChest, true), 1500);
+      }
+    }
+
+    if (this.currentDungeonFloor < 10) {
+      this.currentDungeonFloor++;
+      this.selectedDungeonFloor = this.currentDungeonFloor;
+      // 觸發神聖聖物三選一
+      this.openRelicPickerModal();
+    } else {
+      this.showAnnouncement('👑 恭喜完全征服【肉鴿地下城 10 層深淵】！登峰造極！');
+    }
+  }
+
+  openRelicPickerModal() {
+    const modal = document.getElementById('relic-pick-modal');
+    const grid = document.getElementById('relic-cards-grid');
+    if (!modal || !grid) return;
+
+    grid.innerHTML = '';
+    sounds.playRelicAcquire();
+
+    // Pick 3 random relics not already owned
+    const allRelicKeys = Object.keys(DUNGEON_RELICS);
+    const available = allRelicKeys.filter(k => !this.dungeonRelics.includes(k));
+    const shuffled = available.sort(() => Math.random() - 0.5).slice(0, 3);
+
+    shuffled.forEach(relicId => {
+      const relic = DUNGEON_RELICS[relicId];
+      if (!relic) return;
+
+      const item = document.createElement('div');
+      item.className = 'relic-card-item';
+      item.innerHTML = `
+        <div class="relic-card-icon">${relic.icon}</div>
+        <div class="relic-card-name">${relic.name}</div>
+        <div class="relic-card-desc">${relic.desc}</div>
+        <button class="relic-choose-btn">✨ 領取聖物</button>
+      `;
+
+      item.addEventListener('click', () => {
+        this.dungeonRelics.push(relicId);
+        sounds.playVictory();
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+        modal.classList.add('hidden');
+        this.openDungeonModal();
+      });
+
+      grid.appendChild(item);
+    });
+
+    modal.classList.remove('hidden');
+  }
+
+  // =========================================================
+  // 🏰 防禦塔 3D 造型 & 競技場主題 (Tower Skins & Arenas)
+  // =========================================================
+
+  openTowerSkinsModal() {
+    this.menuOverlay.classList.add('hidden');
+    const modal = document.getElementById('tower-skins-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    this.renderTowerSkins();
+    this.renderArenaThemes();
+  }
+
+  renderTowerSkins() {
+    const grid = document.getElementById('tower-skins-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const ownedSkins = inventory.data?.ownedTowerSkins || ['classic'];
+    const currentSkin = inventory.data?.selectedTowerSkin || 'classic';
+
+    Object.values(TOWER_SKINS).forEach(skin => {
+      const isOwned = ownedSkins.includes(skin.id);
+      const isEquipped = currentSkin === skin.id;
+
+      const card = document.createElement('div');
+      card.className = `skin-item-card ${isEquipped ? 'equipped' : ''}`;
+
+      let btnHtml = '';
+      if (isEquipped) {
+        btnHtml = `<button class="skin-action-btn equipped">✅ 已裝備</button>`;
+      } else if (isOwned) {
+        btnHtml = `<button class="skin-action-btn equip" data-skin="${skin.id}">立即裝備</button>`;
+      } else {
+        btnHtml = `<button class="skin-action-btn unlock" data-skin="${skin.id}">💎 ${skin.costGems} 解鎖</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="skin-icon-box">${skin.icon}</div>
+        <div class="skin-name">${skin.name}</div>
+        <div class="skin-desc">${skin.description}</div>
+        ${btnHtml}
+      `;
+
+      card.querySelector('.skin-action-btn.equip')?.addEventListener('click', () => {
+        if (!inventory.data.selectedTowerSkin) inventory.data.selectedTowerSkin = 'classic';
+        inventory.data.selectedTowerSkin = skin.id;
+        inventory.save();
+        sounds.playTone(650, 950, 0.1, 'triangle');
+        this.renderTowerSkins();
+      });
+
+      card.querySelector('.skin-action-btn.unlock')?.addEventListener('click', () => {
+        if (inventory.data.gems < skin.costGems) {
+          this.showAnnouncement(`💎 寶石不足！需要 ${skin.costGems} 寶石`);
+          return;
+        }
+        inventory.data.gems -= skin.costGems;
+        if (!inventory.data.ownedTowerSkins) inventory.data.ownedTowerSkins = ['classic'];
+        inventory.data.ownedTowerSkins.push(skin.id);
+        inventory.data.selectedTowerSkin = skin.id;
+        inventory.save();
+        sounds.playUpgradeSound();
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        this.updateCurrencyUI();
+        this.renderTowerSkins();
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  renderArenaThemes() {
+    const grid = document.getElementById('arena-themes-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const currentTheme = inventory.data?.selectedArenaTheme || 'royal_valley';
+
+    Object.values(ARENA_THEMES).forEach(theme => {
+      const isEquipped = currentTheme === theme.id;
+      const card = document.createElement('div');
+      card.className = `arena-item-card ${isEquipped ? 'equipped' : ''}`;
+
+      card.innerHTML = `
+        <div class="arena-icon-box">${theme.icon}</div>
+        <div class="arena-name">${theme.name}</div>
+        <div class="arena-desc">${theme.description}</div>
+        <button class="arena-action-btn ${isEquipped ? 'equipped' : 'equip'}" data-theme="${theme.id}">
+          ${isEquipped ? '✅ 使用中' : '更換主題'}
+        </button>
+      `;
+
+      card.querySelector('.arena-action-btn.equip')?.addEventListener('click', () => {
+        inventory.data.selectedArenaTheme = theme.id;
+        inventory.save();
+        sounds.playTone(523, 783, 0.12, 'sine');
+        this.renderArenaThemes();
+        this.callbacks.onThemeChanged?.(theme.id);
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // =========================================================
+  // 👑 英雄冠軍主動技能 HUD 更新器 (Champion Active HUD)
+  // =========================================================
+
+  updateChampionHUD({ active, champion, cooldown }) {
+    const btn = document.getElementById('champion-ability-btn');
+    if (!btn) return;
+
+    if (!active || !champion || !champion.ability) {
+      btn.classList.add('hidden');
+      return;
+    }
+
+    btn.classList.remove('hidden');
+    const iconEl = document.getElementById('champ-ability-icon');
+    const nameEl = document.getElementById('champ-ability-name');
+    const costEl = document.getElementById('champ-ability-cost');
+    const cdOverlay = document.getElementById('champ-cooldown-overlay');
+    const cdText = document.getElementById('champ-cooldown-text');
+
+    if (iconEl) iconEl.textContent = champion.ability.icon || '⚡';
+    if (nameEl) nameEl.textContent = champion.ability.name || '英雄技能';
+    if (costEl) costEl.textContent = `💧 ${champion.ability.cost || 1}`;
+
+    if (cooldown > 0) {
+      cdOverlay?.classList.remove('hidden');
+      if (cdText) cdText.textContent = `${Math.ceil(cooldown)}s`;
+    } else {
+      cdOverlay?.classList.add('hidden');
+    }
   }
 }
 

@@ -77,6 +77,17 @@
           <span class="badge-free">FREE</span>
         </button>
 
+        <button id="btn-open-dungeon" class="playful-orb-btn flame-pulse" title="肉鴿地下城試煉塔 · 爬塔獲神聖聖物">
+          <span class="orb-icon">🧗</span>
+          <span class="orb-label">肉鴿地牢</span>
+          <span class="badge-dot active"></span>
+        </button>
+
+        <button id="btn-open-tower-skins" class="playful-orb-btn cyan-pulse" title="防禦塔 3D 造型 & 競技場主題更換">
+          <span class="orb-icon">🏰</span>
+          <span class="orb-label">塔樓造型</span>
+        </button>
+
         <button id="btn-open-pass" class="playful-orb-btn gold-pulse" title="皇室尊爵戰令">
           <span class="orb-icon">👑</span>
           <span class="orb-label">皇室戰令</span>
@@ -1013,6 +1024,21 @@
           </div>
         </div>
 
+        <!-- 👑 英雄冠軍主動技能浮動釋放按鈕 (Champion Ability Trigger Button) -->
+        <button id="champion-ability-btn" class="champion-ability-btn hidden" title="釋放英雄專屬主動技能">
+          <div class="champ-btn-glow"></div>
+          <div class="champ-icon-box">
+            <span class="champ-ability-icon" id="champ-ability-icon">⚡</span>
+          </div>
+          <div class="champ-info-box">
+            <span class="champ-ability-name" id="champ-ability-name">英雄技能</span>
+            <span class="champ-ability-cost" id="champ-ability-cost">💧 1</span>
+          </div>
+          <div class="champ-cooldown-overlay hidden" id="champ-cooldown-overlay">
+            <span id="champ-cooldown-text">12s</span>
+          </div>
+        </button>
+
         <div class="cards-hand-wrapper">
           <div class="next-card-slot">
             <span class="next-label">下一個</span>
@@ -1477,6 +1503,86 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       🧗 肉鴿地下城試煉塔 (Roguelike Dungeon Gauntlet Modal)
+       ========================================================= -->
+  <div id="dungeon-modal" class="modal-backdrop hidden">
+    <div class="dialog-card super-large dungeon-gauntlet-card">
+      <div class="deck-panel-header">
+        <div class="dungeon-header-info">
+          <h2 class="dialog-title">🧗 肉鴿地下城試煉塔 (10 層深淵征途)</h2>
+          <span class="dungeon-tag">ROGUELIKE GAUNTLET</span>
+        </div>
+        <button id="btn-close-dungeon" class="action-btn cancel small">返回大廳</button>
+      </div>
+      <p class="panel-tip">挑戰 10 層地牢怪獸與神殿首領！每突破一層可自由挑選 1 項神聖聖物強化戰力，直至討伐第 10 層萬惡魔神泰坦！</p>
+
+      <!-- Active Relics Inventory Tray -->
+      <div class="dungeon-relics-tray">
+        <span class="relics-tray-title">✨ 已獲神聖聖物 (<span id="relics-count">0</span>/6)：</span>
+        <div class="relics-list" id="dungeon-relics-list">
+          <span class="empty-relic-hint">尚無聖物，挑戰通關獲取強力被動！</span>
+        </div>
+      </div>
+
+      <!-- 10 Floors Roadmap Grid -->
+      <div class="dungeon-floors-container" id="dungeon-floors-container">
+        <!-- Dynamically rendered floors 1 to 10 -->
+      </div>
+
+      <!-- Footer Action -->
+      <div class="dungeon-footer-bar">
+        <div class="dungeon-status-text" id="dungeon-status-text">當前進度：第 1 層</div>
+        <button id="btn-start-dungeon-floor" class="royal-chunky-btn gold-pulse">
+          <span>⚔️ 出征當前層數！</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-Pick-1 Divine Relic Picker Modal -->
+  <div id="relic-pick-modal" class="modal-backdrop hidden">
+    <div class="dialog-card large relic-picker-card">
+      <div class="relic-header">
+        <span class="relic-crown">✨</span>
+        <h2 class="dialog-title">神聖聖物降臨 · 三選一</h2>
+        <p class="relic-sub">請選擇 1 項神聖聖物，賦予本次地下城冒險永久戰鬥加成！</p>
+      </div>
+
+      <div class="relic-cards-grid" id="relic-cards-grid">
+        <!-- 3 Relic Option Cards -->
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       🏰 防禦塔 3D 造型 & 競技場主題更換 (Tower Skins & Arenas Modal)
+       ========================================================= -->
+  <div id="tower-skins-modal" class="modal-backdrop hidden">
+    <div class="dialog-card super-large skins-panel-card">
+      <div class="deck-panel-header">
+        <div class="skins-header-info">
+          <h2 class="dialog-title">🏰 皇家防禦塔造型 & 3D 競技場主題</h2>
+          <span class="skins-tag">COSMETICS & ARENAS</span>
+        </div>
+        <button id="btn-close-tower-skins" class="action-btn cancel small">返回大廳</button>
+      </div>
+      <p class="panel-tip">更換專屬防禦塔 3D 外觀與戰鬥競技場主題！戰鬥中即刻生效。</p>
+
+      <!-- Section 1: Tower Skins -->
+      <div class="shop-section-title">🗼 防禦塔 3D 專屬造型 (TOWER SKINS)</div>
+      <div class="skins-cards-grid" id="tower-skins-grid">
+        <!-- Dynamically rendered tower skins -->
+      </div>
+
+      <!-- Section 2: Arena Biome Themes -->
+      <div class="shop-section-title" style="margin-top: 24px;">🏟️ 3D 主題戰鬥競技場 (ARENA THEMES)</div>
+      <div class="arenas-cards-grid" id="arena-themes-grid">
+        <!-- Dynamically rendered arena themes -->
       </div>
     </div>
   </div>

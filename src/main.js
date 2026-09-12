@@ -31,6 +31,7 @@ class ClashRoyaleApp {
       onTimeChange: (timeStr, rawTime) => this.updateTimerUI(timeStr, rawTime),
       onAnnouncement: (msg) => this.menuUI?.showAnnouncement(msg),
       onBrawlUpdate: (status) => this.menuUI?.updateBrawlHud(status),
+      onChampionStatus: (status) => this.menuUI?.updateChampionHUD(status),
       onBrawlBotDeploy: (cardId, pos, team) => {
         // 🌐 房主產出電腦 AI 出兵時，即時廣播給所有房間好友，杜絕資料不一致
         if (this.mode === 'brawl' && this.network.isHost && this.network.getConnectedCount() > 0) {
@@ -51,6 +52,17 @@ class ClashRoyaleApp {
         sounds.stopBGM();
         this.inBattle = false;
         this.pveManager.stopPvE();
+
+        // 🧗 肉鴿地牢結算
+        if (this.mode === 'dungeon') {
+          if (result === 'win') {
+            this.menuUI?.onDungeonFloorVictory();
+          } else {
+            this.menuUI?.showAnnouncement('💀 地牢試煉失敗！請強化卡牌或調整戰術重試！');
+            this.menuUI?.showGameOver(result, scores);
+          }
+          return;
+        }
 
         // 🌐 若為線上對決房主，權威廣播遊戲終結與比分至客端
         if (this.mode === 'online' && this.network.isHost) {
@@ -164,6 +176,7 @@ class ClashRoyaleApp {
       onStartPvE: () => this.startPvEMode(),
       onStartBrawl: (options) => this.startBrawlMode(options),
       onStart2v2: () => this.start2v2Mode(),
+      onStartDungeon: (floorData, relics) => this.startDungeonMode(floorData, relics),
       onStartMatchmaking: () => this.matchmaker.startSearching(),
       onCancelMatchmaking: () => this.matchmaker.cancelSearching(),
       onOpenOnlineModal: () => this.initOnlineHost(),
@@ -177,6 +190,8 @@ class ClashRoyaleApp {
       onReturnToMenu: () => this.returnToMenu(),
       onDeckChanged: () => this.deckBarUI.reset(),
       onTriggerKingPower: (powerId) => this.battle.triggerKingPower(powerId),
+      onTriggerChampionAbility: () => this.battle.activateChampionAbility(),
+      onThemeChanged: (themeId) => this.arena.setArenaTheme(themeId),
       onToggleCamera: () => this.arena.cycleCameraMode()
     });
 
@@ -310,6 +325,37 @@ class ClashRoyaleApp {
     this.battle.startBattle();
     sounds.startBattleBGM();
     this.menuUI.showAnnouncement('🛡️ 守護國王塔！怪物大軍即將入侵！');
+  }
+
+  startDungeonMode(floorData, relics = []) {
+    this.mode = 'dungeon';
+    this.inBattle = true;
+    this.pveManager.stopPvE();
+
+    this.aiController.difficulty = floorData.floor >= 7 ? 'hard' : (floorData.floor >= 4 ? 'medium' : 'easy');
+    if (floorData.enemyDeck) {
+      this.aiController.setDeck(floorData.enemyDeck);
+    }
+
+    this.menuUI.enterBattleView();
+    document.getElementById('battle-mode-badge').textContent = `🧗 地牢第 ${floorData.floor} 層 (${floorData.name})`;
+    document.getElementById('enemy-name').textContent = floorData.bossName || `第 ${floorData.floor} 層守衛`;
+    document.getElementById('player-name').textContent = `${inventory.data.username || '皇家領主'} (你)`;
+
+    // 依據地下城層數動態更換戰鬥競技場主題
+    const theme = floorData.floor >= 8 ? 'inferno_abyss' : (floorData.floor >= 4 ? 'frozen_peak' : 'royal_valley');
+    this.arena.setArenaTheme(theme);
+
+    this.battle.setBattleMode('classic', {
+      dungeonFloor: floorData,
+      dungeonRelics: relics,
+      playerTowerSkin: inventory.data?.selectedTowerSkin || 'classic'
+    });
+
+    this.resetMatch();
+    this.battle.startBattle();
+    sounds.startBattleBGM(floorData.floor >= 8);
+    this.menuUI.showAnnouncement(`🧗 進入肉鴿地下城第 ${floorData.floor} 層：${floorData.name}！`);
   }
 
   startBrawlMode(options = {}) {
