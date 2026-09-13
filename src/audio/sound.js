@@ -291,6 +291,74 @@ class SoundEngine {
     osc.stop(now + duration);
   }
 
+  // -------------------------------------------------------------
+  // 🔊 通用音效分發與別名管理 (保證任何 sounds.play() 與音效呼叫 100% 絕不拋錯)
+  // -------------------------------------------------------------
+
+  play(name, ...args) {
+    if (!this.enabled) return;
+    this.ensureContext();
+
+    switch (name) {
+      case 'btn_click':
+      case 'button_click':
+      case 'click':
+        this.playTone(650, 950, 0.06, 'sine', 0.18);
+        break;
+      case 'chest_open':
+      case 'open_chest':
+        this.playUpgradeSound();
+        break;
+      case 'sword_hit':
+      case 'hit':
+        this.playHit();
+        break;
+      case 'bow_shot':
+      case 'arrow':
+        this.playArrowShoot();
+        break;
+      case 'deploy':
+      case 'spawn':
+        this.playDeploy();
+        break;
+      case 'victory':
+        this.playVictory();
+        break;
+      case 'defeat':
+        this.playDefeat();
+        break;
+      case 'fanfare':
+        this.playFanfare();
+        break;
+      case 'explosion':
+        this.playExplosion();
+        break;
+      default:
+        this.playTone(520, 780, 0.08, 'triangle', 0.2);
+        break;
+    }
+  }
+
+  playSwordHit() {
+    this.playHit();
+  }
+
+  playBowShot() {
+    this.playArrowShoot();
+  }
+
+  playSpawn(type = '') {
+    this.playDeploy();
+  }
+
+  playFanfare() {
+    if (!this.enabled) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.5];
+    notes.forEach((f, i) => {
+      setTimeout(() => this.playTone(f, f * 1.02, 0.22, 'triangle', 0.32), i * 70);
+    });
+  }
+
   playDeploy() {
     if (!this.enabled) return;
     this.ensureContext();

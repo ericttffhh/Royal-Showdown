@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       }
     } catch (e) {}
 
-    return res.status(404).json({ success: false, error: 'Save not found' });
+    return res.status(200).json({ success: false, notFound: true, message: 'No cloud record found yet' });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
