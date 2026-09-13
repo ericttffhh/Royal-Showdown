@@ -529,6 +529,25 @@ export class MenuUI {
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(`admin-tab-${tab}`)?.classList.add('active');
+        if (tab === 'accounts') {
+          this.renderAdminAccounts(this.currentAdminAccountFilter || 'all', this.currentAdminAccountSearch || '');
+        }
+      });
+    });
+
+    // 👥 Admin Registered Accounts Search & Filter Listeners
+    const accountSearchInput = document.getElementById('admin-account-search-input');
+    accountSearchInput?.addEventListener('input', (e) => {
+      this.currentAdminAccountSearch = e.target.value;
+      this.renderAdminAccounts(this.currentAdminAccountFilter || 'all', this.currentAdminAccountSearch);
+    });
+
+    document.querySelectorAll('.admin-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.currentAdminAccountFilter = btn.dataset.filter;
+        this.renderAdminAccounts(this.currentAdminAccountFilter, this.currentAdminAccountSearch || '');
       });
     });
 
@@ -2565,6 +2584,7 @@ export class MenuUI {
     await this.renderAdminNodes();
     this.renderAdminLogs();
     this.renderAdminMatches(stats);
+    this.renderAdminAccounts(this.currentAdminAccountFilter || 'all', this.currentAdminAccountSearch || '');
   }
 
   renderAdminPlayers(activePlayers = []) {
@@ -2745,6 +2765,111 @@ export class MenuUI {
         <td>${h.duration ? h.duration + ' 秒' : '完賽'}</td>
       </tr>
     `).join('');
+  }
+
+  // 4. 渲染全服註冊帳號名冊與管理資料庫
+  renderAdminAccounts(filterType = 'all', searchQuery = '') {
+    const tbody = document.getElementById('admin-accounts-tbody');
+    const countTag = document.getElementById('admin-registered-count-tag');
+    if (!tbody) return;
+
+    let accounts = auth.getAllRegisteredAccounts();
+
+    // 1. 關鍵字搜尋過濾
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      accounts = accounts.filter(a => 
+        (a.username && a.username.toLowerCase().includes(q)) ||
+        (a.email && a.email.toLowerCase().includes(q)) ||
+        (a.id && a.id.toLowerCase().includes(q))
+      );
+    }
+
+    // 2. 認證類型過濾
+    if (filterType && filterType !== 'all') {
+      accounts = accounts.filter(a => a.authType === filterType);
+    }
+
+    if (countTag) {
+      countTag.textContent = `${accounts.length} 個帳號`;
+    }
+
+    if (accounts.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; color: #94a3b8; padding: 24px;">
+            🔍 找不到符合條件的註冊帳號
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const authLabels = {
+      google: { label: '🔴 Google OAuth', class: 'google' },
+      local: { label: '🔵 本地帳號', class: 'local' },
+      guest: { label: '⚪ 訪客帳號', class: 'guest' }
+    };
+
+    tbody.innerHTML = accounts.map(a => {
+      const authInfo = authLabels[a.authType] || authLabels.guest;
+      return `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 18px;">${a.avatar || '👑'}</span>
+              <div>
+                <strong style="color: #f8fafc; font-size: 13px;">${a.username || '皇家領主'}</strong>
+                ${a.isCurrent ? '<span class="ping-badge fast" style="font-size: 9px; padding: 1px 5px; margin-left: 4px;">當前登入 (You)</span>' : ''}
+              </div>
+            </div>
+          </td>
+          <td><span class="auth-badge ${authInfo.class}">${authInfo.label}</span></td>
+          <td>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="color: #e2e8f0; font-size: 11.5px;">${a.email || '—'}</span>
+              <code style="color: #64748b; font-size: 10px;">${a.id}</code>
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #facc15; font-weight: 800; font-size: 13px;">Lv.${a.level || 1}</span>
+              <span style="color: #64748b; font-size: 10.5px;">(${a.exp || 0} EXP)</span>
+            </div>
+          </td>
+          <td><strong style="color: #60a5fa; font-size: 13px;">🏆 ${a.trophies || 1000}</strong></td>
+          <td>
+            <div style="display: flex; gap: 10px; font-size: 12px; font-weight: 700;">
+              <span style="color: #fbbf24;">🪙 ${(a.gold || 0).toLocaleString()}</span>
+              <span style="color: #34d399;">💎 ${(a.gems || 0).toLocaleString()}</span>
+            </div>
+          </td>
+          <td><span style="color: #94a3b8; font-size: 11px;">${a.createdAt || '未知'}</span></td>
+          <td>
+            ${a.isCurrent
+              ? '<span class="admin-switch-account-btn current">已在線</span>'
+              : `<button class="admin-switch-account-btn" data-account-id="${a.id}">切換登入</button>`
+            }
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // 綁定切換帳號按鈕事件
+    tbody.querySelectorAll('.admin-switch-account-btn[data-account-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.accountId;
+        const targetUser = auth.accounts.find(u => u.id === targetId);
+        if (targetUser) {
+          const prevId = auth.currentUser ? auth.currentUser.id : null;
+          auth.setCurrentUser(targetUser);
+          this.refreshUserData(prevId);
+          this.renderAdminAccounts(this.currentAdminAccountFilter || 'all', this.currentAdminAccountSearch || '');
+          this.showAnnouncement(`👑 已成功切換至帳號：${targetUser.username}！`);
+          sounds.playTone(700, 60, 0.1, 'sine');
+        }
+      });
+    });
   }
 
   async runPingDiagnostic() {

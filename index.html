@@ -1506,6 +1506,7 @@
         <button class="admin-tab-btn active" data-tab="nodes">🌐 伺服器節點與即時診斷</button>
         <button class="admin-tab-btn" data-tab="history">📜 伺服器歷程與操作日誌</button>
         <button class="admin-tab-btn" data-tab="matches">🎮 遊戲場次與戰績大數據</button>
+        <button class="admin-tab-btn" data-tab="accounts">👥 全服註冊帳號名冊</button>
       </div>
 
       <!-- Tab 1: Server Nodes & Live Diagnostics -->
@@ -1618,6 +1619,47 @@
             </thead>
             <tbody id="admin-matches-tbody">
               <!-- Dynamically populated match history -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 4: Registered Accounts Database -->
+      <div id="admin-tab-accounts" class="admin-tab-content">
+        <div class="admin-section-title">
+          <span>👥 全服註冊帳號名冊與管理 (Registered User Accounts Database)</span>
+          <span class="live-tag" id="admin-registered-count-tag" style="background: #0284c7; box-shadow: 0 0 10px rgba(2, 132, 199, 0.4);">0 個帳號</span>
+        </div>
+
+        <!-- Toolbar: Search and Filters -->
+        <div class="admin-accounts-toolbar">
+          <div class="admin-search-box">
+            <input type="text" id="admin-account-search-input" placeholder="🔍 搜尋用戶暱稱、Gmail 或 帳號 ID..." />
+          </div>
+          <div class="admin-filter-group">
+            <button class="admin-filter-btn active" data-filter="all">全部帳號</button>
+            <button class="admin-filter-btn" data-filter="google">🔴 Google 帳號</button>
+            <button class="admin-filter-btn" data-filter="local">🔵 本地密碼帳號</button>
+            <button class="admin-filter-btn" data-filter="guest">⚪ 訪客帳號</button>
+          </div>
+        </div>
+
+        <div class="admin-history-table-wrapper" style="margin-top: 14px;">
+          <table class="admin-nodes-table">
+            <thead>
+              <tr>
+                <th>頭像 / 用戶名稱</th>
+                <th>認證體系</th>
+                <th>關聯 Email / 帳號 ID</th>
+                <th>領主等級</th>
+                <th>天梯獎盃</th>
+                <th>資源庫存 (金幣 / 寶石)</th>
+                <th>註冊日期</th>
+                <th>帳號操作</th>
+              </tr>
+            </thead>
+            <tbody id="admin-accounts-tbody">
+              <!-- Dynamically populated registered accounts -->
             </tbody>
           </table>
         </div>

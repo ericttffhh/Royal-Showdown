@@ -59,10 +59,76 @@ export class AuthManager {
 
   saveAccounts(accounts) {
     try {
-      localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts || this.accounts));
+      const list = accounts || this.accounts;
+      localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(list));
+
+      // 同步註冊至全域帳號名冊
+      const globalRaw = localStorage.getItem('royal_registered_accounts_global_v2');
+      const globalList = globalRaw ? JSON.parse(globalRaw) : [];
+      list.forEach(a => {
+        const idx = globalList.findIndex(g => g.id === a.id || (a.email && g.email && a.email.toLowerCase() === g.email.toLowerCase()));
+        if (idx >= 0) globalList[idx] = a;
+        else globalList.push(a);
+      });
+      localStorage.setItem('royal_registered_accounts_global_v2', JSON.stringify(globalList));
     } catch (e) {
       console.error('儲存帳號失敗:', e);
     }
+  }
+
+  // 獲取所有已註冊與本地帳號名冊 (包含 Google、本地密碼帳號、訪客與各帳號資源數據)
+  getAllRegisteredAccounts() {
+    const list = [...this.accounts];
+
+    // 讀取全域跨設備同步之註冊帳號庫
+    try {
+      const globalRaw = localStorage.getItem('royal_registered_accounts_global_v2');
+      if (globalRaw) {
+        const globalList = JSON.parse(globalRaw);
+        if (Array.isArray(globalList)) {
+          globalList.forEach(g => {
+            const exists = list.some(a => a.id === g.id || (g.email && a.email && a.email.toLowerCase() === g.email.toLowerCase()));
+            if (!exists) {
+              list.push(g);
+            }
+          });
+        }
+      }
+    } catch (e) {}
+
+    // 為每個帳號豐富當前存檔資源 (等級、天梯獎盃、金幣、寶石)
+    return list.map(acc => {
+      let gold = 800;
+      let gems = 150;
+      let trophies = 1000;
+      let level = acc.level || 1;
+      let exp = acc.exp || 0;
+      let cardCount = 8;
+
+      try {
+        const saveRaw = localStorage.getItem(`royal_clash_save_user_${acc.id}`);
+        if (saveRaw) {
+          const save = JSON.parse(saveRaw);
+          if (save.gold !== undefined) gold = save.gold;
+          if (save.gems !== undefined) gems = save.gems;
+          if (save.trophies !== undefined) trophies = save.trophies;
+          if (save.playerLevel !== undefined) level = save.playerLevel;
+          if (save.playerExp !== undefined) exp = save.playerExp;
+          if (save.cards) cardCount = Object.keys(save.cards).length;
+        }
+      } catch (e) {}
+
+      return {
+        ...acc,
+        level,
+        exp,
+        gold,
+        gems,
+        trophies,
+        cardCount,
+        isCurrent: this.currentUser && this.currentUser.id === acc.id
+      };
+    });
   }
 
   loadCurrentUser() {
