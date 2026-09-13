@@ -760,7 +760,7 @@ export class MenuUI {
         if (side) {
           this.selectedBrawlSide = side;
           this.updateBrawlSeatsUI();
-          try { if (navigator.vibrate) navigator.vibrate(10); } catch(e){}
+          try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) { }
         }
       });
     });
@@ -1081,10 +1081,10 @@ export class MenuUI {
         </div>
         <div>
           ${isReached
-            ? (isClaimed
-                ? '<button class="trophy-claim-btn claimed">已領取</button>'
-                : `<button class="trophy-claim-btn" data-req="${item.trophies}">領取獎勵</button>`)
-            : '<span style="font-size: 11px; color: #8fa0c0;">未達成</span>'}
+          ? (isClaimed
+            ? '<button class="trophy-claim-btn claimed">已領取</button>'
+            : `<button class="trophy-claim-btn" data-req="${item.trophies}">領取獎勵</button>`)
+          : '<span style="font-size: 11px; color: #8fa0c0;">未達成</span>'}
         </div>
       `;
 
@@ -1124,10 +1124,10 @@ export class MenuUI {
         </div>
         <div style="margin-left: 12px; flex-shrink: 0;">
           ${q.completed
-            ? (q.claimed
-                ? '<button class="trophy-claim-btn claimed">已領取</button>'
-                : `<button class="trophy-claim-btn" data-quest="${q.id}">領取 ${q.rewardGold || 250}🪙 ${q.rewardGems || 10}💎</button>`)
-            : `<span style="font-size: 11px; color: #8fa0c0; font-weight: 700;">${q.rewardGold || 250}🪙 ${q.rewardGems || 10}💎</span>`}
+          ? (q.claimed
+            ? '<button class="trophy-claim-btn claimed">已領取</button>'
+            : `<button class="trophy-claim-btn" data-quest="${q.id}">領取 ${q.rewardGold || 250}🪙 ${q.rewardGems || 10}💎</button>`)
+          : `<span style="font-size: 11px; color: #8fa0c0; font-weight: 700;">${q.rewardGold || 250}🪙 ${q.rewardGems || 10}💎</span>`}
         </div>
       `;
 
@@ -1213,10 +1213,10 @@ export class MenuUI {
           <div class="reward-icon-title">${item.freeReward.icon}</div>
           <div class="reward-action-area">
             ${isReached
-              ? (freeClaimed
-                  ? '<span class="reward-status-txt claimed">已領取</span>'
-                  : `<button class="pass-claim-btn free" data-tier="${item.tier}">領取免費</button>`)
-              : '<span class="reward-status-txt locked">未解鎖</span>'}
+          ? (freeClaimed
+            ? '<span class="reward-status-txt claimed">已領取</span>'
+            : `<button class="pass-claim-btn free" data-tier="${item.tier}">領取免費</button>`)
+          : '<span class="reward-status-txt locked">未解鎖</span>'}
           </div>
         </div>
 
@@ -1225,12 +1225,12 @@ export class MenuUI {
           <div class="reward-icon-title">${item.goldReward.icon}</div>
           <div class="reward-action-area">
             ${inventory.data.hasGoldPass
-              ? (isReached
-                  ? (goldClaimed
-                      ? '<span class="reward-status-txt claimed">已領取</span>'
-                      : `<button class="pass-claim-btn gold" data-tier="${item.tier}">領取黃金</button>`)
-                  : '<span class="reward-status-txt locked">未解鎖</span>')
-              : '<span class="reward-status-txt require-pass">需解鎖黃金戰令</span>'}
+          ? (isReached
+            ? (goldClaimed
+              ? '<span class="reward-status-txt claimed">已領取</span>'
+              : `<button class="pass-claim-btn gold" data-tier="${item.tier}">領取黃金</button>`)
+            : '<span class="reward-status-txt locked">未解鎖</span>')
+          : '<span class="reward-status-txt require-pass">需解鎖黃金戰令</span>'}
           </div>
         </div>
       `;
@@ -1290,7 +1290,7 @@ export class MenuUI {
 
       const card = document.createElement('div');
       card.className = `seven-day-item day-${item.day} ${isClaimed ? 'claimed' : (canClaimNow ? 'available' : 'locked')}`;
-      
+
       let actionHtml = '';
       if (isClaimed) {
         actionHtml = '<span class="seven-status-btn claimed">✅ 已簽到</span>';
@@ -1364,10 +1364,10 @@ export class MenuUI {
         </div>
         <div class="ach-action-box">
           ${isCompleted
-            ? (isClaimed
-                ? '<button class="trophy-claim-btn claimed">已領取</button>'
-                : `<button class="trophy-claim-btn featured" data-ach="${ach.id}">領取 ${ach.rewardGems} 💎</button>`)
-            : `<span style="font-size: 11px; color: #8fa0c0;">${ach.rewardGems} 💎</span>`}
+          ? (isClaimed
+            ? '<button class="trophy-claim-btn claimed">已領取</button>'
+            : `<button class="trophy-claim-btn featured" data-ach="${ach.id}">領取 ${ach.rewardGems} 💎</button>`)
+          : `<span style="font-size: 11px; color: #8fa0c0;">${ach.rewardGems} 💎</span>`}
         </div>
       `;
 
@@ -1430,10 +1430,10 @@ export class MenuUI {
         </div>
         <div class="level-tier-action">
           ${isReached
-            ? (isClaimed
-                ? '<span class="level-status-txt claimed">已領取</span>'
-                : `<button class="level-claim-btn ${isMajor ? 'gold' : ''}" data-lvl="${lvl}">領取獎勵</button>`)
-            : `<span class="level-status-txt locked">Lv.${lvl} 解鎖</span>`}
+          ? (isClaimed
+            ? '<span class="level-status-txt claimed">已領取</span>'
+            : `<button class="level-claim-btn ${isMajor ? 'gold' : ''}" data-lvl="${lvl}">領取獎勵</button>`)
+          : `<span class="level-status-txt locked">Lv.${lvl} 解鎖</span>`}
         </div>
       `;
 
@@ -1633,7 +1633,7 @@ export class MenuUI {
       await new Promise(r => setTimeout(r, 140));
 
       this.logMultiTest(`  ✅ 8 組帳號於「${feat.name}」全部通過！(${feat.desc})`, 'success');
-      try { sounds.play('button_click'); } catch(e){}
+      try { sounds.play('button_click'); } catch (e) { }
 
       completedSteps++;
       const pct = Math.round((completedSteps / totalSteps) * 100);
@@ -1767,8 +1767,8 @@ export class MenuUI {
     const deals = [];
 
     // Slot 0: 🎁 每日限時免費領取 (100% 免費)
-    const slot0CardId = Math.random() < 0.65 
-      ? commons[Math.floor(Math.random() * commons.length)] 
+    const slot0CardId = Math.random() < 0.65
+      ? commons[Math.floor(Math.random() * commons.length)]
       : rares[Math.floor(Math.random() * rares.length)];
     const isRare0 = CARDS[slot0CardId].rarity === 'rare';
     const slot0Count = isRare0 ? 6 : 25;
@@ -1835,8 +1835,8 @@ export class MenuUI {
 
     // Slot 4: 史詩大量或傳奇 8折特惠
     const isLeg4 = Math.random() < 0.4 && legendaries.length > 0;
-    const slot4CardId = isLeg4 
-      ? legendaries[Math.floor(Math.random() * legendaries.length)] 
+    const slot4CardId = isLeg4
+      ? legendaries[Math.floor(Math.random() * legendaries.length)]
       : epics[Math.floor(Math.random() * epics.length)];
     const slot4Count = isLeg4 ? 1 : 8;
     const slot4Currency = isLeg4 ? 'gems' : 'gold';
@@ -1853,8 +1853,8 @@ export class MenuUI {
     });
 
     // Slot 5: 傳奇英雄神選 75折特惠 (-25%)
-    const slot5CardId = legendaries.length > 0 
-      ? legendaries[Math.floor(Math.random() * legendaries.length)] 
+    const slot5CardId = legendaries.length > 0
+      ? legendaries[Math.floor(Math.random() * legendaries.length)]
       : epics[0];
     const slot5Count = 1;
     const slot5Orig = 250;
@@ -1894,12 +1894,12 @@ export class MenuUI {
       const item = document.createElement('div');
       item.className = `shop-daily-card-item rarity-${card.rarity} ${deal.sold ? 'is-sold-out' : ''}`;
 
-      const priceText = deal.discountPrice === 0 
-        ? '<span class="price-free">🎁 免費領取</span>' 
+      const priceText = deal.discountPrice === 0
+        ? '<span class="price-free">🎁 免費領取</span>'
         : `<span class="price-currency">${deal.currency === 'gems' ? '💎' : '🪙'} ${deal.discountPrice.toLocaleString()}</span>`;
 
-      const origPriceText = deal.discountPrice === 0 
-        ? `<s>🪙 ${deal.originalPrice.toLocaleString()}</s>` 
+      const origPriceText = deal.discountPrice === 0
+        ? `<s>🪙 ${deal.originalPrice.toLocaleString()}</s>`
         : `<s>${deal.currency === 'gems' ? '💎' : '🪙'} ${deal.originalPrice.toLocaleString()}</s>`;
 
       const rarityLabels = {
@@ -1941,14 +1941,14 @@ export class MenuUI {
             if (deal.currency === 'gems') {
               if ((inventory.data.gems || 0) < deal.discountPrice) {
                 this.showAnnouncement(`⚠️ 璀璨寶石不足 (需要 ${deal.discountPrice} 💎)！`);
-                try { sounds.playTone(220, 150, 0.2, 'sawtooth'); } catch (err) {}
+                try { sounds.playTone(220, 150, 0.2, 'sawtooth'); } catch (err) { }
                 return;
               }
               inventory.addGems(-deal.discountPrice);
             } else {
               if ((inventory.data.gold || 0) < deal.discountPrice) {
                 this.showAnnouncement(`⚠️ 皇家金幣不足 (需要 ${deal.discountPrice} 🪙)！`);
-                try { sounds.playTone(220, 150, 0.2, 'sawtooth'); } catch (err) {}
+                try { sounds.playTone(220, 150, 0.2, 'sawtooth'); } catch (err) { }
                 return;
               }
               inventory.addGold(-deal.discountPrice);
@@ -1970,14 +1970,14 @@ export class MenuUI {
           deal.sold = true;
           this.saveDailyDeals();
 
-          try { sounds.playVictory(); } catch (err) {}
-          try { confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } }); } catch (err) {}
+          try { sounds.playVictory(); } catch (err) { }
+          try { confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } }); } catch (err) { }
 
           const freePrefix = deal.discountPrice === 0 ? '🎁 免費入手' : '✨ 成功購買';
           this.showAnnouncement(`${freePrefix} ${card.name} 碎片 x${deal.count}！`);
 
           this.updateCurrencyUI();
-          try { this.deckBuilder?.renderAll?.(); } catch (err) {}
+          try { this.deckBuilder?.renderAll?.(); } catch (err) { }
           this.renderDailyDeals();
         };
 
@@ -2626,7 +2626,7 @@ export class MenuUI {
         try {
           const ping = await presenceTracker.measureRealPing(ep.url);
           return { ...ep, ping };
-        } catch(e) {
+        } catch (e) {
           return { ...ep, ping: 22 };
         }
       })
@@ -2776,7 +2776,7 @@ export class MenuUI {
     if (confirm('確定要清理本地暫存快取並重新連線伺服器嗎？（玩家等級與卡牌資料將透過雲端伺服器自動保留）')) {
       try {
         sessionStorage.clear();
-      } catch(e) {}
+      } catch (e) { }
       this.openAdminDashboardModal();
       sounds.playVictory();
       this.showAnnouncement('🧹 本地快取清理完成，網路節點連線已重新優化！');
@@ -2825,7 +2825,7 @@ export class MenuUI {
 
     this.wheelPrizes.forEach((p, idx) => {
       const angle = idx * arcSize;
-      
+
       // Draw slice
       ctx.beginPath();
       ctx.fillStyle = p.color;
@@ -3057,7 +3057,7 @@ export class MenuUI {
 
       const card = document.createElement('div');
       card.className = `dungeon-floor-card ${isCleared ? 'cleared' : ''} ${isCurrent ? 'current' : ''} ${isLocked ? 'locked' : ''}`;
-      
+
       let stateBadge = isCleared ? '✅ 已通關' : (isCurrent ? '⚔️ 當前挑戰' : '🔒 未解鎖');
       let bossHtml = floor.bossName ? `<div class="floor-boss-name">${floor.bossName}</div>` : '';
 

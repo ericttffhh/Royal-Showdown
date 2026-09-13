@@ -383,6 +383,155 @@ class CloudSyncService {
 }
 
 /**
+ * 🛰️ 輕量級跨設備 WebSockets MQTT 實時廣播協議
+ * 支援全球手機、電腦、平板跨網段 100% 真實即時在線心跳互通
+ */
+class SimpleMqttPresenceRelay {
+  constructor(topic, onMessage) {
+    this.topic = topic;
+    this.onMessage = onMessage;
+    this.brokers = [
+      'wss://broker.emqx.io:8084/mqtt',
+      'wss://broker.hivemq.com:8884/mqtt'
+    ];
+    this.currentBrokerIdx = 0;
+    this.ws = null;
+    this.connected = false;
+    this.pingTimer = null;
+    this.reconnectTimer = null;
+    this.connect();
+  }
+
+  connect() {
+    if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return;
+    try {
+      const url = this.brokers[this.currentBrokerIdx];
+      this.ws = new WebSocket(url, ['mqtt']);
+      this.ws.binaryType = 'arraybuffer';
+
+      this.ws.onopen = () => {
+        const clientId = 'clash_' + Math.random().toString(36).substring(2, 10);
+        this.ws.send(this.encodeConnect(clientId));
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const buf = new Uint8Array(event.data);
+          if (buf.length === 0) return;
+          const packetType = buf[0] >> 4;
+
+          if (packetType === 2) { // CONNACK
+            this.connected = true;
+            this.ws.send(this.encodeSubscribe(this.topic, 1));
+            if (this.pingTimer) clearInterval(this.pingTimer);
+            this.pingTimer = setInterval(() => {
+              if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(new Uint8Array([0xc0, 0x00])); // PINGREQ
+              }
+            }, 25000);
+          } else if (packetType === 3) { // PUBLISH
+            const data = this.decodePublish(buf);
+            if (data) this.onMessage?.(data);
+          }
+        } catch (e) {}
+      };
+
+      this.ws.onerror = () => {};
+      this.ws.onclose = () => {
+        this.connected = false;
+        if (this.pingTimer) clearInterval(this.pingTimer);
+        this.currentBrokerIdx = (this.currentBrokerIdx + 1) % this.brokers.length;
+        if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = setTimeout(() => this.connect(), 4000);
+      };
+    } catch (e) {
+      if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = setTimeout(() => this.connect(), 4000);
+    }
+  }
+
+  publish(obj) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.connected) return;
+    try {
+      const payload = JSON.stringify(obj);
+      const packet = this.encodePublish(this.topic, payload);
+      this.ws.send(packet);
+    } catch (e) {}
+  }
+
+  encodeConnect(clientId) {
+    const proto = [0x00, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3c];
+    const idBytes = new TextEncoder().encode(clientId);
+    const idLen = [idBytes.length >> 8, idBytes.length & 0xff];
+    const remLen = proto.length + 2 + idBytes.length;
+    const packet = new Uint8Array(2 + remLen);
+    packet[0] = 0x10;
+    packet[1] = remLen;
+    packet.set(proto, 2);
+    packet.set(idLen, 2 + proto.length);
+    packet.set(idBytes, 2 + proto.length + 2);
+    return packet;
+  }
+
+  encodeSubscribe(topic, msgId) {
+    const topicBytes = new TextEncoder().encode(topic);
+    const remLen = 2 + 2 + topicBytes.length + 1;
+    const packet = new Uint8Array(2 + remLen);
+    packet[0] = 0x82;
+    packet[1] = remLen;
+    packet[2] = msgId >> 8;
+    packet[3] = msgId & 0xff;
+    packet[4] = topicBytes.length >> 8;
+    packet[5] = topicBytes.length & 0xff;
+    packet.set(topicBytes, 6);
+    packet[6 + topicBytes.length] = 0x00;
+    return packet;
+  }
+
+  encodePublish(topic, payloadStr) {
+    const topicBytes = new TextEncoder().encode(topic);
+    const payloadBytes = new TextEncoder().encode(payloadStr);
+    const remLen = 2 + topicBytes.length + payloadBytes.length;
+    const lenBytes = [];
+    let l = remLen;
+    do {
+      let digit = l % 128;
+      l = Math.floor(l / 128);
+      if (l > 0) digit |= 0x80;
+      lenBytes.push(digit);
+    } while (l > 0);
+
+    const packet = new Uint8Array(1 + lenBytes.length + remLen);
+    packet[0] = 0x30;
+    packet.set(lenBytes, 1);
+    const offset = 1 + lenBytes.length;
+    packet[offset] = topicBytes.length >> 8;
+    packet[offset + 1] = topicBytes.length & 0xff;
+    packet.set(topicBytes, offset + 2);
+    packet.set(payloadBytes, offset + 2 + topicBytes.length);
+    return packet;
+  }
+
+  decodePublish(buf) {
+    let offset = 1;
+    let multiplier = 1;
+    let length = 0;
+    let digit;
+    do {
+      digit = buf[offset++];
+      length += (digit & 127) * multiplier;
+      multiplier *= 128;
+    } while ((digit & 128) !== 0 && offset < buf.length);
+
+    const topicLen = (buf[offset] << 8) | buf[offset + 1];
+    offset += 2 + topicLen;
+    const payloadBytes = buf.subarray(offset);
+    const text = new TextDecoder('utf-8').decode(payloadBytes);
+    return JSON.parse(text);
+  }
+}
+
+/**
  * 👥 全球真實實時在線人數心跳廣播與診斷引擎 (100% Genuine Real Presence & Telemetry)
  */
 export class PresenceTracker {
@@ -392,19 +541,53 @@ export class PresenceTracker {
     this.broadcast = null;
     this.heartbeatTimer = null;
     this.currentMode = 'lobby';
+    this.listeners = new Set();
+    this.remoteMemoryMap = new Map();
 
+    // 1. 同設備跨分頁即時廣播
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         this.broadcast = new BroadcastChannel('royal_presence_channel');
         this.broadcast.onmessage = (e) => {
           if (e.data && e.data.type === 'heartbeat') {
             this.recordPresence(e.data.payload);
+            this.notifyListeners();
+          } else if (e.data && e.data.type === 'leave') {
+            this.removeRemotePresence(e.data.sessionId);
+            this.notifyListeners();
           }
         };
       }
     } catch (e) {}
 
+    // 2. 跨設備全球真實在線 MQTT 廣播網關 (支援手機/電腦/異地網路)
+    this.mqtt = new SimpleMqttPresenceRelay('royal-showdown-3d/presence/global-v1', (data) => {
+      if (!data || !data.sessionId) return;
+      if (data.sessionId === this.sessionId) return; // 忽略自己發送的回聲
+      if (data.isLeaving) {
+        this.removeRemotePresence(data.sessionId);
+      } else {
+        this.recordPresence(data);
+      }
+      this.notifyListeners();
+    });
+
     this.startHeartbeat();
+  }
+
+  onPresenceChange(cb) {
+    if (typeof cb === 'function') this.listeners.add(cb);
+  }
+
+  offPresenceChange(cb) {
+    this.listeners.delete(cb);
+  }
+
+  notifyListeners() {
+    const list = this.getActivePlayers();
+    this.listeners.forEach(cb => {
+      try { cb(list); } catch (e) {}
+    });
   }
 
   setMode(mode) {
@@ -417,7 +600,7 @@ export class PresenceTracker {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {
       this.sendHeartbeat();
-    }, 5000);
+    }, 4000);
 
     // 視窗離開時清除心跳
     if (typeof window !== 'undefined') {
@@ -463,23 +646,21 @@ export class PresenceTracker {
     const payload = this.getSelfPayload();
     this.recordPresence(payload);
 
-    // 1. BroadcastChannel 同設備/跨標籤頁即時廣播
+    // 1. 本地跨標籤頁廣播
     try {
       this.broadcast?.postMessage({ type: 'heartbeat', payload });
     } catch (e) {}
 
-    // 2. 雲端伺服器註冊
+    // 2. 全球跨設備 MQTT 實時廣播
     try {
-      fetch(`/api/cloud?presence=${encodeURIComponent(JSON.stringify(payload))}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(() => {});
+      this.mqtt?.publish(payload);
     } catch (e) {}
   }
 
   recordPresence(payload) {
     if (!payload || !payload.sessionId) return;
+    this.remoteMemoryMap.set(payload.sessionId, payload);
+
     try {
       const raw = localStorage.getItem(this.storageKey);
       const map = raw ? JSON.parse(raw) : {};
@@ -497,7 +678,26 @@ export class PresenceTracker {
     } catch (e) {}
   }
 
+  removeRemotePresence(sessionId) {
+    if (!sessionId) return;
+    this.remoteMemoryMap.delete(sessionId);
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        const map = JSON.parse(raw);
+        delete map[sessionId];
+        localStorage.setItem(this.storageKey, JSON.stringify(map));
+      }
+    } catch (e) {}
+  }
+
   removeSelfPresence() {
+    try {
+      this.mqtt?.publish({ sessionId: this.sessionId, isLeaving: true });
+    } catch (e) {}
+    try {
+      this.broadcast?.postMessage({ type: 'leave', sessionId: this.sessionId });
+    } catch (e) {}
     try {
       const raw = localStorage.getItem(this.storageKey);
       if (raw) {
@@ -508,23 +708,38 @@ export class PresenceTracker {
     } catch (e) {}
   }
 
-  // 獲取目前真實在線的所有活躍玩家清單
+  // 獲取目前真實在線的所有活躍玩家清單 (合併本機 + 遠端設備)
   getActivePlayers() {
     try {
-      const raw = localStorage.getItem(this.storageKey);
-      const map = raw ? JSON.parse(raw) : {};
       const cutoff = Date.now() - 18000;
-      const list = [];
+      const mergedMap = new Map();
 
+      // 1. 記憶體中接收到的跨設備遠端玩家
+      this.remoteMemoryMap.forEach((val, key) => {
+        if (key !== this.sessionId && val.timestamp >= cutoff) {
+          mergedMap.set(key, { ...val, isSelf: false });
+        }
+      });
+
+      // 2. 本地儲存中的同機/跨分頁玩家
+      const raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        const localMap = JSON.parse(raw);
+        Object.keys(localMap).forEach(key => {
+          if (key !== this.sessionId && localMap[key] && localMap[key].timestamp >= cutoff) {
+            mergedMap.set(key, { ...localMap[key], isSelf: false });
+          }
+        });
+      }
+
+      const list = [];
       // 確保自身永遠在列表第一位
       const selfPayload = this.getSelfPayload();
       selfPayload.isSelf = true;
       list.push(selfPayload);
 
-      Object.keys(map).forEach(key => {
-        if (key !== this.sessionId && map[key] && map[key].timestamp >= cutoff) {
-          list.push({ ...map[key], isSelf: false });
-        }
+      mergedMap.forEach(player => {
+        list.push(player);
       });
 
       return list;
@@ -544,7 +759,6 @@ export class PresenceTracker {
       });
       return Math.max(1, Math.round(performance.now() - start));
     } catch (e) {
-      // 若被 CORS 攔截，嘗試以 Image Ping 測量
       return new Promise((resolve) => {
         const img = new Image();
         const imgStart = performance.now();
@@ -560,4 +774,5 @@ export class PresenceTracker {
 
 export const cloudSync = new CloudSyncService();
 export const presenceTracker = new PresenceTracker();
+
 
