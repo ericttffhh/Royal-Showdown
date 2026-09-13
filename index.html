@@ -1445,33 +1445,29 @@
     </div>
   </div>
 
-  <!-- 🔒 管理員通行密鑰門禁驗證彈窗 (ADMIN AUTH GATE MODAL) -->
-  <div id="admin-auth-modal" class="modal-backdrop hidden">
-    <div class="dialog-card admin-auth-card">
-      <div class="admin-auth-header" style="text-align: center;">
-        <span style="font-size: 38px;">🔐</span>
-        <h3 style="margin: 8px 0 4px 0; color: #38bdf8; font-size: 18px; font-weight: 800;">管理員授權門禁驗證</h3>
-        <p style="margin: 0; color: #94a3b8; font-size: 12.5px;">此區域包含全服即時數據、營運監控與帳號管理<br><strong style="color: #facc15;">僅限管理員信箱 (eric961230146@gmail.com) 登入解鎖</strong></p>
+  <!-- 🚫 管理員權限不足提示彈窗 (ADMIN ACCESS DENIED MODAL) -->
+  <div id="admin-denied-modal" class="modal-backdrop hidden">
+    <div class="dialog-card admin-denied-card" style="text-align: center;">
+      <div style="font-size: 46px; margin-bottom: 6px;">🚫</div>
+      <h3 style="margin: 0 0 6px 0; color: #f87171; font-size: 19px; font-weight: 800;">權限不足 (Access Denied)</h3>
+      <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
+        此區域為核心營運後台，包含全服大數據與伺服器監控<br><strong style="color: #facc15;">僅限登入管理員帳號 (eric961230146@gmail.com) 存取</strong>
+      </p>
+
+      <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(248, 113, 113, 0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; text-align: left; font-size: 12.5px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="color: #64748b;">當前遊戲帳號：</span>
+          <strong id="denied-current-account" style="color: #cbd5e1; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">訪客領主 (非管理員)</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: #64748b;">授權管理帳號：</span>
+          <strong style="color: #38bdf8;">eric961230146@gmail.com</strong>
+        </div>
       </div>
 
-      <div class="admin-auth-body" style="margin: 16px 0;">
-        <div id="admin-user-badge-hint" class="hidden" style="margin-bottom: 12px; padding: 8px 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; font-size: 12px; color: #38bdf8;">
-          👑 檢測到已登入管理員帳號：<strong id="admin-detected-email">eric961230146@gmail.com</strong>
-        </div>
-        <div style="position: relative;">
-          <input type="password" id="admin-passcode-input" class="admin-auth-input" placeholder="請輸入管理員信箱 (eric961230146@gmail.com) 或 通行密鑰" />
-          <button type="button" id="btn-toggle-admin-pwd" class="admin-pwd-toggle-btn">👁️</button>
-        </div>
-        <div id="admin-auth-error-msg" class="admin-auth-error hidden">❌ 權限不足！後台僅限管理員信箱 (eric961230146@gmail.com) 登入存取。</div>
-        <label style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: #cbd5e1; cursor: pointer;">
-          <input type="checkbox" id="admin-remember-auth" checked style="cursor: pointer;" />
-          <span>本次瀏覽期間保持解鎖狀態 (記住授權)</span>
-        </label>
-      </div>
-
-      <div class="dialog-buttons">
-        <button id="btn-submit-admin-auth" class="action-btn confirm">🔓 驗證並解鎖後台</button>
-        <button id="btn-cancel-admin-auth" class="action-btn cancel">取消</button>
+      <div class="dialog-buttons" style="flex-direction: column; gap: 8px;">
+        <button id="btn-denied-goto-login" class="action-btn confirm" style="width: 100%;">🔑 切換 / 登入管理員帳號</button>
+        <button id="btn-close-admin-denied" class="action-btn cancel" style="width: 100%;">關閉</button>
       </div>
     </div>
   </div>

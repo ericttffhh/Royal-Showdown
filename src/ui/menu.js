@@ -499,7 +499,7 @@ export class MenuUI {
       this.replaysModal.classList.add('hidden');
     });
 
-    // 📊 Admin Dashboard & Telemetry Operations Opener (With Security Gate)
+    // 📊 Admin Dashboard & Telemetry Operations Opener (Strict Admin Game Account Gate)
     document.getElementById('btn-open-admin-dashboard')?.addEventListener('click', () => {
       this.openAdminAccessGate();
     });
@@ -509,32 +509,18 @@ export class MenuUI {
     });
 
     document.getElementById('btn-lock-admin')?.addEventListener('click', () => {
-      this.lockAdminSession();
+      this.adminModal?.classList.add('hidden');
+      this.showAnnouncement('🔒 已退出統一後台');
     });
 
-    // 🔒 Admin Auth Gate Listeners
-    document.getElementById('btn-submit-admin-auth')?.addEventListener('click', () => {
-      this.verifyAdminPasscode();
+    // 🚫 Admin Access Denied Modal Listeners
+    document.getElementById('btn-close-admin-denied')?.addEventListener('click', () => {
+      document.getElementById('admin-denied-modal')?.classList.add('hidden');
     });
 
-    document.getElementById('btn-cancel-admin-auth')?.addEventListener('click', () => {
-      document.getElementById('admin-auth-modal')?.classList.add('hidden');
-    });
-
-    document.getElementById('btn-toggle-admin-pwd')?.addEventListener('click', () => {
-      const pwdInput = document.getElementById('admin-passcode-input');
-      const toggleBtn = document.getElementById('btn-toggle-admin-pwd');
-      if (pwdInput) {
-        const isPwd = pwdInput.type === 'password';
-        pwdInput.type = isPwd ? 'text' : 'password';
-        if (toggleBtn) toggleBtn.textContent = isPwd ? '🙈' : '👁️';
-      }
-    });
-
-    document.getElementById('admin-passcode-input')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        this.verifyAdminPasscode();
-      }
+    document.getElementById('btn-denied-goto-login')?.addEventListener('click', () => {
+      document.getElementById('admin-denied-modal')?.classList.add('hidden');
+      this.openAuthModal('login');
     });
 
     document.getElementById('btn-run-ping-test')?.addEventListener('click', () => {
@@ -2567,84 +2553,32 @@ export class MenuUI {
   }
 
   // -------------------------------------------------------------
-  // 🔒 管理員門禁驗證與安全會話管理 (ADMIN SECURITY & AUTH GATE)
+  // 🔒 管理員門禁驗證 (只有登入管理員遊戲帳號才能進入，其他帳號點擊跳出權限不足)
   // -------------------------------------------------------------
 
-  isAdminAuthenticated() {
-    const isSessionUnlocked = sessionStorage.getItem('royal_admin_auth_v1') === 'unlocked';
-    const isCurrentAdmin = auth.isAdminUser();
-    return isSessionUnlocked || isCurrentAdmin;
-  }
-
   openAdminAccessGate() {
-    const isCurrentAdmin = auth.isAdminUser();
-
-    if (this.isAdminAuthenticated()) {
+    if (auth.isAdminUser()) {
+      // ✅ 登入的是管理員遊戲帳號 -> 直接進入後台！
       this.openAdminDashboardModal();
-      if (isCurrentAdmin) {
-        this.showAnnouncement(`👑 歡迎管理員 ${ADMIN_EMAIL} 進入統一後台`);
-      }
-    } else {
-      const authModal = document.getElementById('admin-auth-modal');
-      const input = document.getElementById('admin-passcode-input');
-      const errorMsg = document.getElementById('admin-auth-error-msg');
-      const hintBadge = document.getElementById('admin-user-badge-hint');
-      const emailEl = document.getElementById('admin-detected-email');
-
-      if (isCurrentAdmin) {
-        if (hintBadge) hintBadge.classList.remove('hidden');
-        if (emailEl) emailEl.textContent = auth.currentUser?.email || ADMIN_EMAIL;
-        if (input) input.value = ADMIN_EMAIL;
-      } else {
-        if (hintBadge) hintBadge.classList.add('hidden');
-        if (input) input.value = '';
-      }
-
-      if (errorMsg) errorMsg.classList.add('hidden');
-      if (authModal) authModal.classList.remove('hidden');
-      setTimeout(() => input?.focus(), 120);
-    }
-  }
-
-  verifyAdminPasscode() {
-    const input = document.getElementById('admin-passcode-input');
-    const errorMsg = document.getElementById('admin-auth-error-msg');
-    const rememberBox = document.getElementById('admin-remember-auth');
-    const val = (input ? input.value : '').trim().toLowerCase();
-
-    const isCurrentAdminUser = auth.isAdminUser();
-
-    // 授權驗證判定：只有 mail 是 eric961230146@gmail.com 或其授權通行金鑰才可登入後台
-    const isValidAdmin = 
-      val === ADMIN_EMAIL.toLowerCase() ||
-      val === 'eric961230146' ||
-      val === 'admin888' ||
-      val === 'royal2026' ||
-      (isCurrentAdminUser && (val === '' || val === ADMIN_EMAIL.toLowerCase() || val === (auth.currentUser?.username || '').toLowerCase()));
-
-    if (isValidAdmin) {
-      if (rememberBox?.checked) {
-        sessionStorage.setItem('royal_admin_auth_v1', 'unlocked');
-      }
-      document.getElementById('admin-auth-modal')?.classList.add('hidden');
-      this.openAdminDashboardModal();
-      this.showAnnouncement(`🔓 管理員身分核驗成功 (${ADMIN_EMAIL})，已解鎖統一後台`);
+      this.showAnnouncement(`👑 歡迎管理員 ${ADMIN_EMAIL} 進入統一後台`);
       sounds.play('chest_open');
     } else {
-      if (errorMsg) {
-        errorMsg.classList.remove('hidden');
-        errorMsg.textContent = `❌ 權限不足！後台僅限授權管理員 (${ADMIN_EMAIL}) 登入存取。`;
+      // ❌ 別的帳號點擊 -> 直接跳出「權限不足」彈窗！
+      const deniedModal = document.getElementById('admin-denied-modal');
+      const accountEl = document.getElementById('denied-current-account');
+      if (accountEl) {
+        const u = auth.currentUser;
+        if (!u || u.authType === 'guest') {
+          accountEl.textContent = '訪客領主 (未登入管理員)';
+        } else {
+          const name = u.username || '領主';
+          const mail = u.email ? ` (${u.email})` : '';
+          accountEl.textContent = `${name}${mail}`;
+        }
       }
+      if (deniedModal) deniedModal.classList.remove('hidden');
       sounds.play('btn_click');
     }
-  }
-
-  lockAdminSession() {
-    sessionStorage.removeItem('royal_admin_auth_v1');
-    this.adminModal?.classList.add('hidden');
-    document.getElementById('admin-auth-modal')?.classList.add('hidden');
-    this.showAnnouncement('🔒 統一後台已安全鎖定');
-    sounds.play('btn_click');
   }
 
   // -------------------------------------------------------------

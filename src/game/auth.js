@@ -36,7 +36,8 @@ export class AuthManager {
     if (!user) return false;
     const email = (user.email || '').toLowerCase().trim();
     const username = (user.username || '').toLowerCase().trim();
-    return email === ADMIN_EMAIL || username === ADMIN_EMAIL;
+    const target = ADMIN_EMAIL.toLowerCase();
+    return email === target || username === target || username === 'eric961230146' || email.startsWith('eric961230146@');
   }
 
   loadAccounts() {
@@ -190,7 +191,7 @@ export class AuthManager {
       id: 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4),
       username: trimmed,
       password: password,
-      email: '',
+      email: trimmed.includes('@') ? trimmed : '',
       authType: 'local',
       avatar: avatar || '👑',
       avatarUrl: null,
