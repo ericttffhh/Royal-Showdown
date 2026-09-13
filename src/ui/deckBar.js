@@ -72,30 +72,48 @@ export class DeckBarUI {
     const cardElements = this.cardsHandEl?.querySelectorAll('.card-item');
     cardElements?.forEach((el) => {
       const id = el.dataset.cardId;
+      const card = CARDS[id];
       if (id === this.selectedCardId) {
         el.classList.add('selected');
+        if (card && this.currentElixir < card.cost) {
+          el.classList.add('low-elixir');
+        } else {
+          el.classList.remove('low-elixir');
+        }
       } else {
-        el.classList.remove('selected');
+        el.classList.remove('selected', 'low-elixir');
       }
     });
+  }
+
+  showFloatingElixirNotice(text, x, y) {
+    // 移除舊的浮動提示
+    const oldToasts = document.querySelectorAll('.elixir-floating-toast');
+    oldToasts.forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = 'elixir-floating-toast';
+    toast.textContent = text;
+    
+    const posX = (x && x > 0) ? Math.max(90, Math.min(window.innerWidth - 90, x)) : window.innerWidth / 2;
+    const posY = (y && y > 0) ? Math.max(100, Math.min(window.innerHeight - 140, y - 40)) : window.innerHeight / 2;
+    
+    toast.style.left = `${posX}px`;
+    toast.style.top = `${posY}px`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.remove();
+      }
+    }, 900);
   }
 
   selectCard(cardId, index, clientX = 0, clientY = 0) {
     const card = CARDS[cardId];
     if (!card) return;
 
-    const isAffordableNow = this.currentElixir >= card.cost;
-    if (!isAffordableNow) {
-      // 聖水不足：Q 彈搖晃與警示音
-      sounds.playTone(200, 60, 0.12, 'sawtooth');
-      const cardEl = this.cardsHandEl?.querySelector(`[data-card-id="${cardId}"]`);
-      if (cardEl) {
-        cardEl.classList.add('wobble-shake');
-        setTimeout(() => cardEl.classList.remove('wobble-shake'), 400);
-      }
-      return;
-    }
-
+    // 💡 實作卡牌預選機制 (Pre-selection Queue)：即使聖水暫時不足，也立即選中並準備部署
     this.selectedCardId = cardId;
     this.selectedCardIndex = index;
     this.dragStartPos = { x: clientX, y: clientY };
@@ -103,7 +121,14 @@ export class DeckBarUI {
     this.isDragging = false;
     this.lastCardSelectTime = Date.now();
 
-    sounds.playTone(680, 45, 0.1, 'sine');
+    const isAffordableNow = this.currentElixir >= card.cost;
+    if (!isAffordableNow) {
+      // 聖水累積中：提供柔和預選提示音與微震
+      sounds.playTone(420, 45, 0.08, 'triangle');
+    } else {
+      sounds.playTone(680, 45, 0.1, 'sine');
+    }
+
     try {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(12);
@@ -132,6 +157,9 @@ export class DeckBarUI {
 
       if (this.selectedCardId === cardId || this.draggedCardId === cardId) {
         cardDiv.classList.add('selected');
+        if (this.currentElixir < card.cost) {
+          cardDiv.classList.add('low-elixir');
+        }
       }
 
       const isAffordable = this.currentElixir >= card.cost;
@@ -151,18 +179,11 @@ export class DeckBarUI {
         <div class="card-name">${isEvoReady ? evoInfo.evo.name : card.name}</div>
       `;
 
-      // 觸控與點擊手牌處理 (使用 pointerdown 支援滑鼠、觸控筆與手指)
+      // 觸控與點擊手牌處理 (pointerdown 支援滑鼠、觸控筆與手指，停止傳遞避免觸發戰場部署)
       cardDiv.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
         this.selectCard(cardId, index, e.clientX, e.clientY);
       });
-
-      cardDiv.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-        if (e.touches && e.touches.length > 0) {
-          this.selectCard(cardId, index, e.touches[0].clientX, e.touches[0].clientY);
-        }
-      }, { passive: true });
 
       this.cardsHandEl.appendChild(cardDiv);
     });
@@ -198,6 +219,14 @@ export class DeckBarUI {
           el.classList.remove('disabled');
         } else {
           el.classList.add('disabled');
+        }
+
+        if (id === this.selectedCardId) {
+          if (isAffordable) {
+            el.classList.remove('low-elixir');
+          } else {
+            el.classList.add('low-elixir');
+          }
         }
       }
     });
@@ -235,6 +264,12 @@ export class DeckBarUI {
       if (affordableId) {
         activeCardId = affordableId;
       } else {
+        const firstCard = this.hand[0];
+        if (firstCard && CARDS[firstCard]) {
+          const cost = CARDS[firstCard].cost;
+          this.showFloatingElixirNotice(`💧 聖水累積中 (${Math.floor(this.currentElixir)}/${cost})`, clientX, clientY);
+          sounds.playTone(200, 60, 0.1, 'sawtooth');
+        }
         return false;
       }
     }
@@ -256,9 +291,25 @@ export class DeckBarUI {
       }
     }
 
+    const card = CARDS[activeCardId];
+    if (!card) return false;
+
+    // 💧 聖水不足檢查：保留預選狀態，提供明確浮動通知與視覺反饋
+    if (this.currentElixir < card.cost) {
+      const diff = (card.cost - this.currentElixir).toFixed(1);
+      this.showFloatingElixirNotice(`💧 聖水不足 (需 ${card.cost} 滴，尚缺 ${diff} 滴)`, clientX, clientY);
+      sounds.playTone(200, 60, 0.12, 'sawtooth');
+      
+      const elixirBar = document.getElementById('elixir-bar-container') || this.elixirFillEl?.parentElement;
+      if (elixirBar) {
+        elixirBar.classList.add('wobble-shake');
+        setTimeout(() => elixirBar.classList.remove('wobble-shake'), 400);
+      }
+      return false;
+    }
+
     const intersection = this.arena.getArenaIntersection(clientX, clientY);
     if (intersection) {
-      const card = CARDS[activeCardId];
       const isSpell = card?.type === 'spell';
 
       const success = this.onCardPlaced(activeCardId, intersection, isSpell);
@@ -284,7 +335,7 @@ export class DeckBarUI {
   }
 
   setupArenaInteractions() {
-    // 1. 移動追蹤 (Pointer & Touch)
+    // 1. 移動追蹤 (Pointer Events 全面支援滑鼠與多點觸控)
     const onMove = (clientX, clientY) => {
       if (this.draggedCardId && this.dragStartPos) {
         const dist = Math.hypot(clientX - this.dragStartPos.x, clientY - this.dragStartPos.y);
@@ -298,36 +349,17 @@ export class DeckBarUI {
     };
 
     window.addEventListener('pointermove', (e) => onMove(e.clientX, e.clientY), { passive: true });
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches.length > 0) {
-        onMove(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    }, { passive: true });
 
-    // 2. 點擊 / 按下部署 (Tap-to-Deploy 即點即放)
-    let lastDeployTapTime = 0;
+    // 2. 點擊 / 按下部署 (Tap-to-Deploy 即點即放 - 0ms 極速無延遲反應)
     const onArenaPress = (clientX, clientY, target) => {
-      const now = Date.now();
-      if (now - lastDeployTapTime < 50) return; // Debounce rapid multi-touch
-
-      if (target && (target.closest('.battle-dock') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)'))) {
+      if (target && (target.closest('.battle-dock') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)') || target.closest('.chat-panel-container'))) {
         return;
       }
-      lastDeployTapTime = now;
       this.tryDeployAtCoordinates(clientX, clientY);
     };
 
     window.addEventListener('pointerdown', (e) => {
-      if (this.selectedCardId) {
-        onArenaPress(e.clientX, e.clientY, e.target);
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchstart', (e) => {
-      if (this.selectedCardId && e.touches && e.touches.length > 0) {
-        const t = e.touches[0];
-        onArenaPress(t.clientX, t.clientY, t.target || e.target);
-      }
+      onArenaPress(e.clientX, e.clientY, e.target);
     }, { passive: true });
 
     // 3. 鬆手部署 (Drag-to-Deploy 拖曳放手即出兵)
@@ -347,12 +379,6 @@ export class DeckBarUI {
     };
 
     window.addEventListener('pointerup', (e) => onRelease(e.clientX, e.clientY, e.target), { passive: true });
-    window.addEventListener('touchend', (e) => {
-      if (e.changedTouches && e.changedTouches.length > 0) {
-        const t = e.changedTouches[0];
-        onRelease(t.clientX, t.clientY, document.elementFromPoint(t.clientX, t.clientY));
-      }
-    }, { passive: true });
   }
 
   cycleCard(usedCardId) {
