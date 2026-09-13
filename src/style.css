@@ -3972,47 +3972,78 @@ body, html {
 .seven-day-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   margin-top: 10px;
 }
 .seven-day-item {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(26, 38, 66, 0.85) 0%, rgba(14, 22, 40, 0.95) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  padding: 12px 8px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
+  text-align: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.seven-day-item.claimed {
+  opacity: 0.8;
+  border-color: rgba(0, 255, 196, 0.35);
+  background: linear-gradient(180deg, rgba(14, 30, 48, 0.85) 0%, rgba(8, 18, 30, 0.95) 100%);
 }
 .seven-day-item.day-7 {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(255, 190, 36, 0.2) 0%, rgba(196, 46, 255, 0.2) 100%);
-  border-color: #ffbe24;
+  background: linear-gradient(135deg, rgba(255, 190, 36, 0.2) 0%, rgba(196, 46, 255, 0.25) 100%);
+  border: 2px solid #ffbe24;
+  box-shadow: 0 0 20px rgba(255, 190, 36, 0.3);
 }
 .seven-day-item.available {
   border-color: #00ffc4;
-  box-shadow: 0 0 16px rgba(0, 255, 196, 0.3);
+  box-shadow: 0 0 18px rgba(0, 255, 196, 0.45);
+  transform: translateY(-2px);
 }
-.seven-day-header { font-size: 10px; color: #8da4be; font-weight: 700; }
-.seven-day-title { font-size: 12px; font-weight: 700; color: #fff; }
-.seven-day-reward-icon { font-size: 18px; margin: 4px 0; }
+.seven-day-header { font-size: 11px; color: var(--royal-gold); font-weight: 800; letter-spacing: 0.5px; }
+.seven-day-title { font-size: 13px; font-weight: 700; color: #fff; }
+.seven-day-reward-icon { font-size: 14px; font-weight: 700; color: #cbd5e1; margin: 2px 0; }
 .seven-claim-btn {
   background: linear-gradient(135deg, #00ffc4 0%, #008866 100%);
   border: none;
   border-radius: 8px;
-  padding: 5px 12px;
+  padding: 6px 14px;
   color: #000;
   font-weight: 900;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 255, 196, 0.4);
   transition: transform 0.15s ease;
 }
 .seven-claim-btn:hover { transform: scale(1.06); }
 .seven-status-btn { font-size: 11px; color: #8da4be; }
 .seven-status-btn.claimed { color: #00ffc4; font-weight: 700; }
+.seven-status-btn.locked { color: #64748b; font-size: 11px; }
+
+.seven-day-reset-banner {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(255, 190, 36, 0.15) 0%, rgba(30, 96, 255, 0.15) 100%);
+  border: 1.5px solid var(--royal-gold);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.reset-banner-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--royal-gold);
+  text-shadow: 0 0 10px rgba(255, 190, 36, 0.5);
+}
 
 /* Achievements Modal */
 .achievements-list {

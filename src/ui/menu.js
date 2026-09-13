@@ -1333,27 +1333,28 @@ export class MenuUI {
     const claimedList = inventory.data.claimedDailyRewards || [];
     const todayClaimed = inventory.data.lastDailyClaimDate === new Date().toISOString().slice(0, 10);
     const nextClaimDay = claimedList.length + 1;
+    const allClaimed = claimedList.length >= 7;
 
     SEVEN_DAY_REWARDS.forEach(item => {
       const isClaimed = claimedList.includes(item.day);
       const isAvailable = item.day === nextClaimDay && !todayClaimed;
 
       const card = document.createElement('div');
-      card.className = `seven-day-card-item ${isClaimed ? 'claimed' : ''} ${isAvailable ? 'available' : ''} ${item.day === 7 ? 'day-7-special' : ''}`;
+      card.className = `seven-day-item day-${item.day} ${isClaimed ? 'claimed' : (isAvailable ? 'available' : 'locked')}`;
       card.innerHTML = `
-        <div class="seven-day-tag">第 ${item.day} 天</div>
-        <div class="seven-day-icon">${item.icon}</div>
+        <div class="seven-day-header">第 ${item.day} 天</div>
+        <div class="seven-day-reward-icon">${item.icon}</div>
         <div class="seven-day-title">${item.title}</div>
-        <div class="seven-day-status">
+        <div class="seven-day-action">
           ${isClaimed
-          ? '<span class="claimed-badge">已領取</span>'
+          ? '<span class="seven-status-btn claimed">✅ 已領取</span>'
           : (isAvailable
-            ? `<button class="claim-day-btn" data-day="${item.day}">立即領取</button>`
-            : '<span class="lock-badge">待解鎖</span>')}
+            ? `<button class="seven-claim-btn" data-day="${item.day}">✨ 立即簽到</button>`
+            : '<span class="seven-status-btn locked">⏳ 待解鎖</span>')}
         </div>
       `;
 
-      card.querySelector('.claim-day-btn')?.addEventListener('click', () => {
+      card.querySelector('.seven-claim-btn')?.addEventListener('click', () => {
         const ok = inventory.claimDailyLoginReward(item.day);
         if (ok) {
           this.grantReward({ type: item.rewardType, val: item.val });
@@ -1366,6 +1367,23 @@ export class MenuUI {
 
       grid.appendChild(card);
     });
+
+    // 🔄 若 7 日均已全數領取完畢，顯示新一輪重啟簽到按鈕
+    if (allClaimed) {
+      const resetBox = document.createElement('div');
+      resetBox.className = 'seven-day-reset-banner';
+      resetBox.innerHTML = `
+        <div class="reset-banner-title">🎉 恭喜！你已領取全部 7 天豪華大獎！</div>
+        <button id="btn-reset-7day-cycle" class="royal-btn gold full">🔄 立即開啟新一輪 7 天簽到狂歡</button>
+      `;
+      resetBox.querySelector('#btn-reset-7day-cycle')?.addEventListener('click', () => {
+        inventory.resetDailyLoginCycle();
+        sounds.playVictory();
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        this.openSevenDayModal();
+      });
+      grid.appendChild(resetBox);
+    }
 
     this.sevenDayModal.classList.remove('hidden');
   }
