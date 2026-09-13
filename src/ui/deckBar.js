@@ -256,6 +256,16 @@ export class DeckBarUI {
   }
 
   tryDeployAtCoordinates(clientX, clientY) {
+    // 🚨 若主選單大廳開啟中（非對戰狀態）或有彈窗開啟，絕不觸發出兵與聖水提示
+    const menuOverlay = document.getElementById('menu-overlay');
+    if (menuOverlay && !menuOverlay.classList.contains('hidden')) {
+      return false;
+    }
+    const openModals = document.querySelectorAll('.modal-backdrop:not(.hidden)');
+    if (openModals.length > 0) {
+      return false;
+    }
+
     let activeCardId = this.selectedCardId || this.draggedCardId;
 
     // 若未手動點選手牌，自動選取手牌中第一張聖水足夠的卡牌進行出兵
@@ -320,6 +330,9 @@ export class DeckBarUI {
   setupArenaInteractions() {
     // 1. 移動追蹤 (Pointer Events 全面支援滑鼠與多點觸控)
     const onMove = (clientX, clientY) => {
+      const menuOverlay = document.getElementById('menu-overlay');
+      if (menuOverlay && !menuOverlay.classList.contains('hidden')) return;
+
       if (this.draggedCardId && this.dragStartPos) {
         const dist = Math.hypot(clientX - this.dragStartPos.x, clientY - this.dragStartPos.y);
         if (dist > 12) {
@@ -335,8 +348,13 @@ export class DeckBarUI {
 
     // 2. 點擊 / 按下部署 (Tap-to-Deploy 即點即放 - 0ms 極速無延遲反應)
     const onArenaPress = (clientX, clientY, target) => {
-      // 僅在明確點擊於手牌本體、按鈕或彈窗上時阻擋出兵；戰場所有畫布點擊 100% 直達出兵邏輯
-      if (target && (target.closest('.card-item') || target.closest('.tool-btn') || target.closest('.king-power-btn') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)') || target.closest('.chat-panel-container'))) {
+      // 🚨 大廳或全螢幕彈窗開啟時，絕不出兵
+      const menuOverlay = document.getElementById('menu-overlay');
+      if (menuOverlay && !menuOverlay.classList.contains('hidden')) return;
+      if (document.querySelector('.modal-backdrop:not(.hidden)')) return;
+
+      // 僅在明確點擊於手牌本體、按鈕或頂欄 UI 元素上時阻擋出兵；戰場所有畫布點擊 100% 直達出兵邏輯
+      if (target && (target.closest('.card-item') || target.closest('.tool-btn') || target.closest('.king-power-btn') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.chat-panel-container') || target.closest('#global-currency-bar'))) {
         return;
       }
       this.tryDeployAtCoordinates(clientX, clientY);
@@ -348,6 +366,13 @@ export class DeckBarUI {
 
     // 3. 鬆手部署 (Drag-to-Deploy 拖曳放手即出兵)
     const onRelease = (clientX, clientY, target) => {
+      const menuOverlay = document.getElementById('menu-overlay');
+      if (menuOverlay && !menuOverlay.classList.contains('hidden')) {
+        this.isDragging = false;
+        this.draggedCardId = null;
+        return;
+      }
+
       if (this.isDragging && this.draggedCardId) {
         const isOverCardOrTool = target && (target.closest('.card-item') || target.closest('.tool-btn'));
         if (!isOverCardOrTool) {
