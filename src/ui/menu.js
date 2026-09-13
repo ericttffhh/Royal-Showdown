@@ -1,7 +1,7 @@
 import confetti from 'canvas-confetti';
 import { CARDS, CHESTS, TROPHY_ROAD, ROYALE_PASS_TIERS, SEVEN_DAY_REWARDS, ACHIEVEMENTS, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelTitle, getPlayerLevelReward, DUNGEON_FLOORS, DUNGEON_RELICS, TOWER_SKINS, ARENA_THEMES } from '../game/cards.js';
 import { inventory } from '../game/inventory.js';
-import { auth, AVATAR_OPTIONS } from '../game/auth.js';
+import { auth, AVATAR_OPTIONS, ADMIN_EMAIL } from '../game/auth.js';
 import { sounds } from '../audio/sound.js';
 import { GachaManager } from './gacha.js';
 import { DeckBuilderUI } from './deckBuilder.js';
@@ -2571,17 +2571,35 @@ export class MenuUI {
   // -------------------------------------------------------------
 
   isAdminAuthenticated() {
-    return sessionStorage.getItem('royal_admin_auth_v1') === 'unlocked';
+    const isSessionUnlocked = sessionStorage.getItem('royal_admin_auth_v1') === 'unlocked';
+    const isCurrentAdmin = auth.isAdminUser();
+    return isSessionUnlocked || isCurrentAdmin;
   }
 
   openAdminAccessGate() {
+    const isCurrentAdmin = auth.isAdminUser();
+
     if (this.isAdminAuthenticated()) {
       this.openAdminDashboardModal();
+      if (isCurrentAdmin) {
+        this.showAnnouncement(`👑 歡迎管理員 ${ADMIN_EMAIL} 進入統一後台`);
+      }
     } else {
       const authModal = document.getElementById('admin-auth-modal');
       const input = document.getElementById('admin-passcode-input');
       const errorMsg = document.getElementById('admin-auth-error-msg');
-      if (input) input.value = '';
+      const hintBadge = document.getElementById('admin-user-badge-hint');
+      const emailEl = document.getElementById('admin-detected-email');
+
+      if (isCurrentAdmin) {
+        if (hintBadge) hintBadge.classList.remove('hidden');
+        if (emailEl) emailEl.textContent = auth.currentUser?.email || ADMIN_EMAIL;
+        if (input) input.value = ADMIN_EMAIL;
+      } else {
+        if (hintBadge) hintBadge.classList.add('hidden');
+        if (input) input.value = '';
+      }
+
       if (errorMsg) errorMsg.classList.add('hidden');
       if (authModal) authModal.classList.remove('hidden');
       setTimeout(() => input?.focus(), 120);
@@ -2592,21 +2610,30 @@ export class MenuUI {
     const input = document.getElementById('admin-passcode-input');
     const errorMsg = document.getElementById('admin-auth-error-msg');
     const rememberBox = document.getElementById('admin-remember-auth');
-    const val = (input ? input.value : '').trim();
+    const val = (input ? input.value : '').trim().toLowerCase();
 
-    // 支援授權通行密鑰: admin888, royal2026, admin
-    if (val === 'admin888' || val === 'royal2026' || val === 'admin') {
+    const isCurrentAdminUser = auth.isAdminUser();
+
+    // 授權驗證判定：只有 mail 是 eric961230146@gmail.com 或其授權通行金鑰才可登入後台
+    const isValidAdmin = 
+      val === ADMIN_EMAIL.toLowerCase() ||
+      val === 'eric961230146' ||
+      val === 'admin888' ||
+      val === 'royal2026' ||
+      (isCurrentAdminUser && (val === '' || val === ADMIN_EMAIL.toLowerCase() || val === (auth.currentUser?.username || '').toLowerCase()));
+
+    if (isValidAdmin) {
       if (rememberBox?.checked) {
         sessionStorage.setItem('royal_admin_auth_v1', 'unlocked');
       }
       document.getElementById('admin-auth-modal')?.classList.add('hidden');
       this.openAdminDashboardModal();
-      this.showAnnouncement('🔓 管理員身分核驗成功，已解鎖統一後台與實時遙測');
+      this.showAnnouncement(`🔓 管理員身分核驗成功 (${ADMIN_EMAIL})，已解鎖統一後台`);
       sounds.play('chest_open');
     } else {
       if (errorMsg) {
         errorMsg.classList.remove('hidden');
-        errorMsg.textContent = '❌ 通行密鑰錯誤或權限不足，請重新輸入！';
+        errorMsg.textContent = `❌ 權限不足！後台僅限授權管理員 (${ADMIN_EMAIL}) 登入存取。`;
       }
       sounds.play('btn_click');
     }

@@ -10,6 +10,9 @@ const GOOGLE_CLIENT_ID_KEY = 'royal_clash_google_client_id';
 // 預設或自訂的 Google OAuth2 Client ID (支援 Google Cloud Console 憑證與 Vite 環境變數)
 const DEFAULT_GOOGLE_CLIENT_ID = '1035987154868-google-client-id-sample.apps.googleusercontent.com';
 
+// 👑 唯一授權管理員信箱
+export const ADMIN_EMAIL = 'eric961230146@gmail.com';
+
 export const AVATAR_OPTIONS = [
   { id: 'king', icon: '👑', name: '皇家國王' },
   { id: 'knight', icon: '🛡️', name: '無畏騎士' },
@@ -27,6 +30,13 @@ export class AuthManager {
     this.currentUser = this.loadCurrentUser();
     const envClientId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLIENT_ID) || '';
     this.googleClientId = localStorage.getItem(GOOGLE_CLIENT_ID_KEY) || envClientId || DEFAULT_GOOGLE_CLIENT_ID;
+  }
+
+  isAdminUser(user = this.currentUser) {
+    if (!user) return false;
+    const email = (user.email || '').toLowerCase().trim();
+    const username = (user.username || '').toLowerCase().trim();
+    return email === ADMIN_EMAIL || username === ADMIN_EMAIL;
   }
 
   loadAccounts() {
