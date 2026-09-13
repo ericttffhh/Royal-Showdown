@@ -274,23 +274,6 @@ export class DeckBarUI {
       }
     }
 
-    // 檢查點擊是否落在手牌 HUD 或頂部導航上
-    const dockEl = document.querySelector('.battle-dock');
-    if (dockEl) {
-      const dockRect = dockEl.getBoundingClientRect();
-      if (clientY >= dockRect.top && clientY <= dockRect.bottom && clientX >= dockRect.left && clientX <= dockRect.right) {
-        return false;
-      }
-    }
-
-    const topBarEl = document.querySelector('.battle-top-bar');
-    if (topBarEl && !topBarEl.classList.contains('hidden')) {
-      const topRect = topBarEl.getBoundingClientRect();
-      if (clientY >= topRect.top && clientY <= topRect.bottom && clientX >= topRect.left && clientX <= topRect.right) {
-        return false;
-      }
-    }
-
     const card = CARDS[activeCardId];
     if (!card) return false;
 
@@ -352,7 +335,8 @@ export class DeckBarUI {
 
     // 2. 點擊 / 按下部署 (Tap-to-Deploy 即點即放 - 0ms 極速無延遲反應)
     const onArenaPress = (clientX, clientY, target) => {
-      if (target && (target.closest('.battle-dock') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)') || target.closest('.chat-panel-container'))) {
+      // 僅在明確點擊於手牌本體、按鈕或彈窗上時阻擋出兵；戰場所有畫布點擊 100% 直達出兵邏輯
+      if (target && (target.closest('.card-item') || target.closest('.tool-btn') || target.closest('.king-power-btn') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)') || target.closest('.chat-panel-container'))) {
         return;
       }
       this.tryDeployAtCoordinates(clientX, clientY);
@@ -365,8 +349,8 @@ export class DeckBarUI {
     // 3. 鬆手部署 (Drag-to-Deploy 拖曳放手即出兵)
     const onRelease = (clientX, clientY, target) => {
       if (this.isDragging && this.draggedCardId) {
-        const isOverDock = target && target.closest('.battle-dock');
-        if (!isOverDock) {
+        const isOverCardOrTool = target && (target.closest('.card-item') || target.closest('.tool-btn'));
+        if (!isOverCardOrTool) {
           this.tryDeployAtCoordinates(clientX, clientY);
         }
       }

@@ -283,16 +283,16 @@ export class BattleEngine {
     const card = getCardScaledStats(cardId, cardLevel) || CARDS[cardId];
     if (!card) return false;
 
-    const currentElixir = this.teamElixir[team] ?? (isPlayer ? this.playerElixir : this.enemyElixir);
+    // 💡 權威聖水校驗：玩家端以 playerElixir 為絕對基準，徹底消除 teamElixir 脫節引起的拒絕出兵問題
+    const currentElixir = isPlayer ? this.playerElixir : (this.teamElixir[team] ?? this.enemyElixir);
     // 🌐 若為遠端連線同步過來的出兵請求，絕不可因微小聖水計時偏差而拒絕丟棄！
     if (!isRemote && currentElixir < card.cost) return false;
 
-    if (this.teamElixir[team] !== undefined) {
-      this.teamElixir[team] = Math.max(0, this.teamElixir[team] - card.cost);
-    }
-
     if (isPlayer && !isRemote) {
       this.playerElixir = Math.max(0, this.playerElixir - card.cost);
+      if (this.teamElixir[team] !== undefined) {
+        this.teamElixir[team] = this.playerElixir;
+      }
       this.callbacks.onElixirChange?.(this.playerElixir);
       inventory.progressQuest('deploy_troops', 1);
       if (card.type === 'spell') {
@@ -308,8 +308,13 @@ export class BattleEngine {
         inventory.progressQuest('deploy_air', 1);
       }
       this.triggerVibrate(15);
-    } else if (team === 'red' && this.battleMode !== 'brawl' && !isRemote) {
-      this.enemyElixir = Math.max(0, this.enemyElixir - card.cost);
+    } else {
+      if (this.teamElixir[team] !== undefined) {
+        this.teamElixir[team] = Math.max(0, this.teamElixir[team] - card.cost);
+      }
+      if (team === 'red' && this.battleMode !== 'brawl' && !isRemote) {
+        this.enemyElixir = Math.max(0, this.enemyElixir - card.cost);
+      }
     }
 
     sounds.playDeploy();
@@ -759,8 +764,11 @@ export class BattleEngine {
     this.enemyElixir = Math.min(10, this.enemyElixir + enemyRegen * deltaTime);
 
     ['blue', 'red', 'green', 'purple'].forEach(tm => {
-      const rate = (tm === this.playerTeam) ? playerRegen : enemyRegen;
-      this.teamElixir[tm] = Math.min(10, (this.teamElixir[tm] || 5.0) + rate * deltaTime);
+      if (tm === this.playerTeam) {
+        this.teamElixir[tm] = this.playerElixir;
+      } else {
+        this.teamElixir[tm] = Math.min(10, (this.teamElixir[tm] || 5.0) + enemyRegen * deltaTime);
+      }
     });
 
     this.callbacks.onElixirChange?.(this.playerElixir);
