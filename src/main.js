@@ -245,6 +245,7 @@ class ClashRoyaleApp {
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM(true);
+    inventory.progressQuest('play_boss', 1);
     this.arena.triggerScreenShake(0.8, 0.6);
     sounds.playMechaImpact();
     this.menuUI.showAnnouncement('⚠️ 警告！滅世級泰坦機甲首領現身戰場！全力阻截！');
@@ -293,6 +294,7 @@ class ClashRoyaleApp {
     this.battle.is7XElixir = true;
     this.battle.startBattle();
     sounds.startBattleBGM(true);
+    inventory.progressQuest('play_7x_elixir', 1);
     this.menuUI.showAnnouncement('⚡ 7X 無限聖水爆發！瘋狂下兵吧！');
   }
 
@@ -325,6 +327,7 @@ class ClashRoyaleApp {
     this.pveManager.startPvE();
     this.battle.startBattle();
     sounds.startBattleBGM();
+    inventory.progressQuest('play_pve', 1);
     this.menuUI.showAnnouncement('🛡️ 守護國王塔！怪物大軍即將入侵！');
   }
 
@@ -356,6 +359,7 @@ class ClashRoyaleApp {
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM(floorData.floor >= 8);
+    inventory.progressQuest('play_dungeon', 1);
     this.menuUI.showAnnouncement(`🧗 進入肉鴿地下城第 ${floorData.floor} 層：${floorData.name}！`);
   }
 
@@ -402,6 +406,7 @@ class ClashRoyaleApp {
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM(true);
+    inventory.progressQuest('play_brawl', 1);
     this.menuUI.showAnnouncement(`💥 四人大亂鬥開啟！你鎮守【${sideNames[mySide]}】！`);
     this.menuUI.updateBrawlHud(this.battle.getBrawlStatus());
   }
@@ -424,6 +429,7 @@ class ClashRoyaleApp {
     this.resetMatch();
     this.battle.startBattle();
     sounds.startBattleBGM();
+    inventory.progressQuest('play_2v2', 1);
     this.menuUI.showAnnouncement('🛡️ 2v2 雙人合作防守！皇家守護盟友與你並肩作戰！');
   }
 

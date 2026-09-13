@@ -459,13 +459,35 @@ export class MenuUI {
       this.trophyModal.classList.add('hidden');
     });
 
-    // Daily Quests Opener
+    // Daily Quests Opener & Refresh
     document.getElementById('btn-open-quests')?.addEventListener('click', () => {
       this.openQuestsModal();
     });
 
     document.getElementById('btn-close-quests')?.addEventListener('click', () => {
       this.questsModal.classList.add('hidden');
+    });
+
+    document.getElementById('btn-refresh-quests')?.addEventListener('click', () => {
+      inventory.refreshDailyQuests(true);
+      sounds.playTone(600, 900, 0.15, 'triangle', 0.4);
+      this.openQuestsModal();
+      this.showAnnouncement('🔄 已隨機刷新一組全新每日任務！');
+    });
+
+    // 7-Day Daily Login (七日簽到)
+    document.getElementById('btn-open-7day')?.addEventListener('click', () => {
+      this.openSevenDayModal();
+    });
+    document.getElementById('btn-close-7day')?.addEventListener('click', () => {
+      this.sevenDayModal.classList.add('hidden');
+      this.menuOverlay.classList.remove('hidden');
+    });
+    document.getElementById('btn-reset-7day')?.addEventListener('click', () => {
+      inventory.resetDailyLoginCycle();
+      sounds.playVictory();
+      this.openSevenDayModal();
+      this.showAnnouncement('🔄 已重置七日簽到輪迴，可重新由第 1 天開始簽到！');
     });
 
     // Match Replays Opener
@@ -635,14 +657,7 @@ export class MenuUI {
       }
     });
 
-    // 7-Day Daily Login (七日簽到)
-    document.getElementById('btn-open-7day')?.addEventListener('click', () => {
-      this.openSevenDayModal();
-    });
-    document.getElementById('btn-close-7day')?.addEventListener('click', () => {
-      this.sevenDayModal.classList.add('hidden');
-      this.menuOverlay.classList.remove('hidden');
-    });
+
 
     // Achievements (榮譽成就)
     document.getElementById('btn-open-achievements')?.addEventListener('click', () => {
@@ -1088,26 +1103,31 @@ export class MenuUI {
 
   openQuestsModal() {
     const list = document.getElementById('quests-list');
+    if (!list) return;
     list.innerHTML = '';
 
+    if (!Array.isArray(inventory.data.quests) || inventory.data.quests.length === 0) {
+      inventory.refreshDailyQuests();
+    }
+
     inventory.data.quests.forEach(q => {
-      const pct = Math.min(100, (q.current / q.goal) * 100);
+      const pct = Math.min(100, Math.round(((q.current || 0) / q.goal) * 100));
       const item = document.createElement('div');
       item.className = 'quest-item';
       item.innerHTML = `
-        <div>
-          <div class="quest-title">${q.title}</div>
-          <div class="quest-desc">${q.desc} (${q.current}/${q.goal})</div>
+        <div style="flex: 1; min-width: 0;">
+          <div class="quest-title">${q.icon || '📜'} ${q.title}</div>
+          <div class="quest-desc">${q.desc} (${q.current || 0}/${q.goal})</div>
           <div class="quest-bar-box">
             <div class="quest-bar-fill ${q.completed ? 'done' : ''}" style="width: ${pct}%"></div>
           </div>
         </div>
-        <div>
+        <div style="margin-left: 12px; flex-shrink: 0;">
           ${q.completed
             ? (q.claimed
                 ? '<button class="trophy-claim-btn claimed">已領取</button>'
-                : `<button class="trophy-claim-btn" data-quest="${q.id}">領取 ${q.rewardGold}🪙 ${q.rewardGems}💎</button>`)
-            : `<span style="font-size: 11px; color: #8fa0c0;">${q.rewardGold}🪙 ${q.rewardGems}💎</span>`}
+                : `<button class="trophy-claim-btn" data-quest="${q.id}">領取 ${q.rewardGold || 250}🪙 ${q.rewardGems || 10}💎</button>`)
+            : `<span style="font-size: 11px; color: #8fa0c0; font-weight: 700;">${q.rewardGold || 250}🪙 ${q.rewardGems || 10}💎</span>`}
         </div>
       `;
 
@@ -1151,7 +1171,7 @@ export class MenuUI {
   }
 
   // -------------------------------------------------------------
-  // 👑 ROYALE PASS (皇室戰令) UI
+  // 👑 ROYALE PASS (皇室戰令 - 35 階) UI
   // -------------------------------------------------------------
 
   openPassModal() {
@@ -1169,7 +1189,7 @@ export class MenuUI {
         unlockBanner.innerHTML = `
           <div class="pass-banner-text">
             <span class="pass-gold-title" style="color:#00ffc4;">👑 已開通尊貴黃金特權通行證 (Gold Pass Active)</span>
-            <span class="pass-gold-sub">享有全部 10 階雙軌豪華傳奇獎勵與專屬尊貴光環！</span>
+            <span class="pass-gold-sub">享有全部 ${ROYALE_PASS_TIERS.length} 階雙軌豪華傳奇獎勵與專屬尊貴光環！</span>
           </div>
         `;
       }
@@ -1251,7 +1271,7 @@ export class MenuUI {
   }
 
   // -------------------------------------------------------------
-  // 🎁 7-DAY DAILY LOGIN REWARDS UI
+  // 🎁 7-DAY LOGIN REWARDS (七日登入豪禮) UI
   // -------------------------------------------------------------
 
   openSevenDayModal() {
@@ -2881,6 +2901,7 @@ export class MenuUI {
 
     this.isSpinningWheel = true;
     sounds.playTone(400, 100, 0.2, 'triangle');
+    inventory.progressQuest('spin_wheel', 1);
 
     // 隨機抽選獎勵 (0 到 7)
     const prizeIndex = Math.floor(Math.random() * this.wheelPrizes.length);

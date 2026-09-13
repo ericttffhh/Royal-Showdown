@@ -295,6 +295,18 @@ export class BattleEngine {
       this.playerElixir = Math.max(0, this.playerElixir - card.cost);
       this.callbacks.onElixirChange?.(this.playerElixir);
       inventory.progressQuest('deploy_troops', 1);
+      if (card.type === 'spell') {
+        inventory.progressQuest('cast_spells', 1);
+      }
+      if (['giant', 'knight', 'megaknight', 'pekka', 'golem', 'valkyrie'].includes(card.id)) {
+        inventory.progressQuest('deploy_tank', 1);
+      }
+      if (['archers', 'musketeer', 'wizard', 'princess', 'dart_goblin'].includes(card.id)) {
+        inventory.progressQuest('deploy_ranged', 1);
+      }
+      if (card.flying || ['dragon', 'minions', 'mega_minion', 'lava_hound'].includes(card.id)) {
+        inventory.progressQuest('deploy_air', 1);
+      }
       this.triggerVibrate(15);
     } else if (team === 'red' && this.battleMode !== 'brawl' && !isRemote) {
       this.enemyElixir = Math.max(0, this.enemyElixir - card.cost);
@@ -438,6 +450,7 @@ export class BattleEngine {
     this.playerElixir -= power.cost;
     this.callbacks.onElixirChange?.(this.playerElixir);
     this.kingPowerCooldowns[powerId] = power.cooldown;
+    inventory.progressQuest('use_king_power', 1);
 
     sounds.playVictory();
 
@@ -1362,6 +1375,7 @@ export class BattleEngine {
     if (isAttackerBlue) {
       this.playerCrowns = Math.min(3, this.playerCrowns + (tower.type === 'king' ? 3 : 1));
       this.callbacks.onCrownChange?.(this.playerCrowns, this.enemyCrowns);
+      inventory.progressQuest('destroy_towers', 1);
     } else {
       this.enemyCrowns = Math.min(3, this.enemyCrowns + (tower.type === 'king' ? 3 : 1));
       this.callbacks.onCrownChange?.(this.playerCrowns, this.enemyCrowns);

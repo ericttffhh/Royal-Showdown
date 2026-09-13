@@ -840,13 +840,45 @@ export const TROPHY_ROAD = [
   { trophies: 4000, name: '傳奇宗師聖殿', rewardType: 'chest', rewardVal: 'legendary', rewardIcon: '💎 傳奇超級寶箱' }
 ];
 
-// 每日任務定義 (Daily Quests)
-export const DEFAULT_QUESTS = [
-  { id: 'deploy_troops', title: '出戰點兵', desc: '在任意模式下部署 15 次兵團單位', goal: 15, current: 0, rewardGold: 200, rewardGems: 10 },
-  { id: 'win_matches', title: '皇室連勝', desc: '在人機或對戰中取得 2 場勝利', goal: 2, current: 0, rewardGold: 300, rewardGems: 15 },
-  { id: 'play_7x_elixir', title: '狂暴風暴', desc: '體驗 1 場 7X 無限聖水狂歡模式', goal: 1, current: 0, rewardGold: 250, rewardGems: 12 },
-  { id: 'open_chest', title: '寶箱探秘', desc: '在抽卡大廳中開啟任意 1 個皇家寶箱', goal: 1, current: 0, rewardGold: 150, rewardGems: 8 }
+// 每日任務資料庫池 (Daily Quests Pool - 18 種豐富隨機任務)
+export const QUEST_POOL = [
+  { id: 'deploy_troops', title: '出戰點兵', desc: '在任意模式下部署 15 次兵團單位', goal: 15, rewardGold: 300, rewardGems: 12, icon: '⚔️' },
+  { id: 'win_matches', title: '皇室連勝', desc: '在任意模式中取得 2 場大捷', goal: 2, rewardGold: 450, rewardGems: 20, icon: '👑' },
+  { id: 'play_7x_elixir', title: '狂暴風暴', desc: '體驗 1 場 7X 無限狂暴聖水模式', goal: 1, rewardGold: 350, rewardGems: 15, icon: '⚡' },
+  { id: 'play_brawl', title: '四方爭霸', desc: '參與 1 場四人混戰大亂鬥模式', goal: 1, rewardGold: 400, rewardGems: 18, icon: '💥' },
+  { id: 'open_chest', title: '寶箱探秘', desc: '在抽卡大廳中開啟任意 1 個皇家寶箱', goal: 1, rewardGold: 250, rewardGems: 10, icon: '📦' },
+  { id: 'destroy_towers', title: '拔寨摧塔', desc: '在戰鬥中累計摧毀 3 座敵方皇冠防禦塔', goal: 3, rewardGold: 500, rewardGems: 22, icon: '🏰' },
+  { id: 'cast_spells', title: '奧術狂潮', desc: '在戰場上施放 6 次法術卡牌 (火球/箭雨/狂暴等)', goal: 6, rewardGold: 320, rewardGems: 14, icon: '✨' },
+  { id: 'deploy_tank', title: '巨獸重裝', desc: '在對局中部署 4 次巨人、騎士或皮卡等近戰前鋒', goal: 4, rewardGold: 350, rewardGems: 15, icon: '🛡️' },
+  { id: 'deploy_ranged', title: '百步穿楊', desc: '在對局中部署 6 次火槍手、弓箭手或法師等遠程部隊', goal: 6, rewardGold: 350, rewardGems: 15, icon: '🏹' },
+  { id: 'deploy_air', title: '空戰奇兵', desc: '在對局中部署 4 次飛龍寶寶或亡靈大軍等飛行部隊', goal: 4, rewardGold: 350, rewardGems: 15, icon: '🐉' },
+  { id: 'play_dungeon', title: '地牢試煉', desc: '挑戰 1 次肉鴿地下城試煉塔', goal: 1, rewardGold: 400, rewardGems: 18, icon: '🧗' },
+  { id: 'play_boss', title: '泰坦討伐', desc: '迎擊 1 次泰坦首領討伐戰', goal: 1, rewardGold: 450, rewardGems: 20, icon: '🦾' },
+  { id: 'play_pve', title: '無盡守護', desc: '挑戰 1 次 PVE 無盡波次防禦模式', goal: 1, rewardGold: 380, rewardGems: 16, icon: '🛡️' },
+  { id: 'use_king_power', title: '帝王天恩', desc: '在對局中觸發 2 次國王大招天賦技能', goal: 2, rewardGold: 360, rewardGems: 16, icon: '⚡' },
+  { id: 'spin_wheel', title: '轉盤運勢', desc: '在每日幸運大轉盤中轉動 1 次', goal: 1, rewardGold: 250, rewardGems: 10, icon: '🎡' },
+  { id: 'collect_elixir_runes', title: '聖水爭奪', desc: '在競技場中搶奪 2 次聖水神符', goal: 2, rewardGold: 420, rewardGems: 18, icon: '🔮' },
+  { id: 'play_2v2', title: '雙人協同', desc: '參與 1 場 2v2 雙人合作守護戰', goal: 1, rewardGold: 380, rewardGems: 16, icon: '👥' },
+  { id: 'upgrade_cards', title: '精兵悍將', desc: '在牌組大廳中升級任意 1 張卡牌', goal: 1, rewardGold: 400, rewardGems: 20, icon: '⭐' }
 ];
+
+export function generateRandomDailyQuests(count = 4) {
+  const shuffled = [...QUEST_POOL].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map(q => ({
+    id: q.id,
+    title: q.title,
+    desc: q.desc,
+    goal: q.goal,
+    current: 0,
+    rewardGold: q.rewardGold,
+    rewardGems: q.rewardGems,
+    icon: q.icon || '📜',
+    completed: false,
+    claimed: false
+  }));
+}
+
+export const DEFAULT_QUESTS = generateRandomDailyQuests(4);
 
 // 預設 8 張出戰卡組
 export const DEFAULT_DECK = [
@@ -860,7 +892,7 @@ export const DEFAULT_DECK = [
   'fireball'
 ];
 
-// 👑 皇室戰令 / 賽季通行證 (Royale Pass - 10 Tiers)
+// 👑 皇室戰令 / 賽季通行證 (Royale Pass - 35 階海量豪華獎勵)
 export const ROYALE_PASS_TIERS = [
   { tier: 1, crownsReq: 5, freeReward: { type: 'gold', val: 300, icon: '🪙 300 金幣' }, goldReward: { type: 'gems', val: 50, icon: '💎 50 寶石' } },
   { tier: 2, crownsReq: 10, freeReward: { type: 'chest', val: 'silver', icon: '📦 白銀寶箱' }, goldReward: { type: 'gold', val: 1000, icon: '🪙 1000 金幣' } },
@@ -871,7 +903,32 @@ export const ROYALE_PASS_TIERS = [
   { tier: 7, crownsReq: 35, freeReward: { type: 'gold', val: 1000, icon: '🪙 1000 金幣' }, goldReward: { type: 'gems', val: 150, icon: '💎 150 寶石' } },
   { tier: 8, crownsReq: 40, freeReward: { type: 'chest', val: 'magical', icon: '✨ 神奇寶箱' }, goldReward: { type: 'gold', val: 4000, icon: '🪙 4000 金幣' } },
   { tier: 9, crownsReq: 45, freeReward: { type: 'gems', val: 80, icon: '💎 80 寶石' }, goldReward: { type: 'gems', val: 200, icon: '💎 200 寶石' } },
-  { tier: 10, crownsReq: 50, freeReward: { type: 'chest', val: 'legendary', icon: '💎 傳奇超級寶箱' }, goldReward: { type: 'chest', val: 'legendary', icon: '👑 黃金傳奇特權寶箱 + 專屬戰令金頭像' } }
+  { tier: 10, crownsReq: 50, freeReward: { type: 'chest', val: 'legendary', icon: '💎 傳奇超級寶箱' }, goldReward: { type: 'chest', val: 'legendary', icon: '👑 黃金傳奇特權寶箱 + 專屬戰令金頭像' } },
+  { tier: 11, crownsReq: 55, freeReward: { type: 'gold', val: 1200, icon: '🪙 1200 金幣' }, goldReward: { type: 'gems', val: 120, icon: '💎 120 寶石' } },
+  { tier: 12, crownsReq: 60, freeReward: { type: 'chest', val: 'silver', icon: '📦 白銀寶箱' }, goldReward: { type: 'gold', val: 2500, icon: '🪙 2500 金幣' } },
+  { tier: 13, crownsReq: 65, freeReward: { type: 'gems', val: 60, icon: '💎 60 寶石' }, goldReward: { type: 'chest', val: 'magical', icon: '✨ 奧術神奇寶箱' } },
+  { tier: 14, crownsReq: 70, freeReward: { type: 'gold', val: 1500, icon: '🪙 1500 金幣' }, goldReward: { type: 'gems', val: 160, icon: '💎 160 寶石' } },
+  { tier: 15, crownsReq: 75, freeReward: { type: 'chest', val: 'silver', icon: '📦 白銀寶箱' }, goldReward: { type: 'gold', val: 3500, icon: '🪙 3500 金幣' } },
+  { tier: 16, crownsReq: 80, freeReward: { type: 'gems', val: 80, icon: '💎 80 寶石' }, goldReward: { type: 'chest', val: 'magical', icon: '✨ 皇家精華寶箱' } },
+  { tier: 17, crownsReq: 85, freeReward: { type: 'gold', val: 2000, icon: '🪙 2000 金幣' }, goldReward: { type: 'gems', val: 200, icon: '💎 200 寶石' } },
+  { tier: 18, crownsReq: 90, freeReward: { type: 'chest', val: 'magical', icon: '✨ 神奇寶箱' }, goldReward: { type: 'gold', val: 5000, icon: '🪙 5000 金幣' } },
+  { tier: 19, crownsReq: 95, freeReward: { type: 'gems', val: 100, icon: '💎 100 寶石' }, goldReward: { type: 'gems', val: 250, icon: '💎 250 寶石' } },
+  { tier: 20, crownsReq: 100, freeReward: { type: 'chest', val: 'legendary', icon: '👑 傳奇超級寶箱' }, goldReward: { type: 'chest', val: 'legendary', icon: '🔥 萬王之王終極傳奇神箱' } },
+  { tier: 21, crownsReq: 105, freeReward: { type: 'gold', val: 2500, icon: '🪙 2500 金幣' }, goldReward: { type: 'gems', val: 180, icon: '💎 180 寶石' } },
+  { tier: 22, crownsReq: 110, freeReward: { type: 'chest', val: 'silver', icon: '📦 白銀寶箱' }, goldReward: { type: 'gold', val: 4000, icon: '🪙 4000 金幣' } },
+  { tier: 23, crownsReq: 115, freeReward: { type: 'gems', val: 100, icon: '💎 100 寶石' }, goldReward: { type: 'chest', val: 'magical', icon: '✨ 神奇寶箱' } },
+  { tier: 24, crownsReq: 120, freeReward: { type: 'gold', val: 3000, icon: '🪙 3000 金幣' }, goldReward: { type: 'gems', val: 220, icon: '💎 220 寶石' } },
+  { tier: 25, crownsReq: 125, freeReward: { type: 'chest', val: 'magical', icon: '✨ 神奇寶箱' }, goldReward: { type: 'gold', val: 6000, icon: '🪙 6000 金幣' } },
+  { tier: 26, crownsReq: 130, freeReward: { type: 'gems', val: 120, icon: '💎 120 寶石' }, goldReward: { type: 'gems', val: 300, icon: '💎 300 寶石' } },
+  { tier: 27, crownsReq: 135, freeReward: { type: 'gold', val: 3500, icon: '🪙 3500 金幣' }, goldReward: { type: 'gold', val: 8000, icon: '🪙 8000 金幣' } },
+  { tier: 28, crownsReq: 140, freeReward: { type: 'chest', val: 'magical', icon: '✨ 神奇寶箱' }, goldReward: { type: 'chest', val: 'magical', icon: '✨ 雙倍神奇特權寶箱' } },
+  { tier: 29, crownsReq: 145, freeReward: { type: 'gems', val: 150, icon: '💎 150 寶石' }, goldReward: { type: 'gems', val: 400, icon: '💎 400 寶石' } },
+  { tier: 30, crownsReq: 150, freeReward: { type: 'chest', val: 'legendary', icon: '👑 傳奇超級寶箱' }, goldReward: { type: 'chest', val: 'legendary', icon: '🏆 賽季宗師尊爵特權箱' } },
+  { tier: 31, crownsReq: 155, freeReward: { type: 'gold', val: 4000, icon: '🪙 4000 金幣' }, goldReward: { type: 'gems', val: 250, icon: '💎 250 寶石' } },
+  { tier: 32, crownsReq: 160, freeReward: { type: 'gems', val: 150, icon: '💎 150 寶石' }, goldReward: { type: 'gold', val: 10000, icon: '🪙 10000 金幣' } },
+  { tier: 33, crownsReq: 165, freeReward: { type: 'chest', val: 'magical', icon: '✨ 神奇寶箱' }, goldReward: { type: 'gems', val: 500, icon: '💎 500 寶石' } },
+  { tier: 34, crownsReq: 170, freeReward: { type: 'gold', val: 5000, icon: '🪙 5000 金幣' }, goldReward: { type: 'chest', val: 'magical', icon: '✨ 至尊星界神奇寶箱' } },
+  { tier: 35, crownsReq: 175, freeReward: { type: 'chest', val: 'legendary', icon: '💎 皇室登峰傳奇寶箱' }, goldReward: { type: 'chest', val: 'legendary', icon: '👑 永恆帝國傳奇神話寶箱 + 皇家星耀特權' } }
 ];
 
 // 🎁 七日簽到豪禮 (7-Day Login Rewards)

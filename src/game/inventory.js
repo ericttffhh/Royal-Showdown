@@ -1,4 +1,4 @@
-import { CARDS, CHESTS, UPGRADE_COSTS, DEFAULT_DECK, DEFAULT_QUESTS, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelReward } from './cards.js';
+import { CARDS, CHESTS, UPGRADE_COSTS, DEFAULT_DECK, DEFAULT_QUESTS, generateRandomDailyQuests, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelReward } from './cards.js';
 import { auth } from './auth.js';
 import { cloudSync } from './cloud.js';
 
@@ -344,26 +344,41 @@ export class InventoryManager {
     return this.data.trophies;
   }
 
-  // 任務進度推進
+  // 任務進度推進 (支援多種隨機任務識別碼)
   progressQuest(questId, amount = 1) {
-    const q = this.data.quests.find(item => item.id === questId);
-    if (q && !q.completed) {
-      q.current = Math.min(q.goal, q.current + amount);
-      if (q.current >= q.goal) {
-        q.completed = true;
+    if (!Array.isArray(this.data.quests)) {
+      this.data.quests = generateRandomDailyQuests(4);
+    }
+    let updated = false;
+    this.data.quests.forEach(q => {
+      if (q.id === questId && !q.completed) {
+        q.current = Math.min(q.goal, (q.current || 0) + amount);
+        if (q.current >= q.goal) {
+          q.completed = true;
+        }
+        updated = true;
       }
+    });
+    if (updated) {
       this.saveData();
     }
+  }
+
+  // 隨機刷新每日任務 (支援手動重置與全部完成後重開)
+  refreshDailyQuests(force = false) {
+    this.data.quests = generateRandomDailyQuests(4);
+    this.saveData();
+    return this.data.quests;
   }
 
   claimQuest(questId) {
     const q = this.data.quests.find(item => item.id === questId);
     if (q && q.completed && !q.claimed) {
       q.claimed = true;
-      this.addGold(q.rewardGold);
-      this.addGems(q.rewardGems);
+      this.addGold(q.rewardGold || 250);
+      this.addGems(q.rewardGems || 10);
       this.saveData();
-      return { gold: q.rewardGold, gems: q.rewardGems };
+      return { gold: q.rewardGold || 250, gems: q.rewardGems || 10 };
     }
     return null;
   }
@@ -464,6 +479,7 @@ export class InventoryManager {
     const expGained = nextLevel * 30;
     const levelResult = this.addExp(expGained);
     this.progressAchievement('card_upgrades', 1);
+    this.progressQuest('upgrade_cards', 1);
 
     this.saveData();
     return { level: cardData.level, remainingCards: cardData.count, gold: this.data.gold, expGained, levelResult };
@@ -606,6 +622,14 @@ export class InventoryManager {
     
     this.data.claimedDailyRewards.push(day);
     this.data.lastDailyClaimDate = todayStr;
+    this.saveData();
+    return true;
+  }
+
+  // 🔄 重置七日簽到輪迴 (重啟新一輪 7 天簽到)
+  resetDailyLoginCycle() {
+    this.data.claimedDailyRewards = [];
+    this.data.lastDailyClaimDate = null;
     this.saveData();
     return true;
   }

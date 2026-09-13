@@ -106,11 +106,6 @@
           <span class="badge-dot" id="quest-alert-dot"></span>
         </button>
 
-        <button id="btn-open-multi-test" class="playful-orb-btn cyan-pulse" title="8帳號全功能實況測試中心">
-          <span class="orb-icon">🧪</span>
-          <span class="orb-label">8帳號測試</span>
-        </button>
-
         <button id="btn-open-admin-dashboard" class="playful-orb-btn purple-pulse" title="營運後台 · 真實實時在線人數與伺服器日誌">
           <span class="orb-icon">📊</span>
           <span class="orb-label">營運後台</span>
@@ -659,11 +654,15 @@
 
   <!-- Daily Quests Modal -->
   <div id="quests-modal" class="modal-backdrop hidden">
-    <div class="dialog-card medium">
+    <div class="dialog-card medium quests-modal-card">
       <div class="deck-panel-header">
         <h2 class="dialog-title">📜 每日任務與挑戰</h2>
-        <button id="btn-close-quests" class="action-btn cancel small">關閉</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn-refresh-quests" class="action-btn primary small" title="隨機刷新一組全新每日任務">🔄 刷新任務</button>
+          <button id="btn-close-quests" class="action-btn cancel small">關閉 ✕</button>
+        </div>
       </div>
+      <p class="panel-tip">完成每日隨機挑戰可領取大量金幣與珍貴寶石！點擊「🔄 刷新任務」可立即更換全新隨機任務組！</p>
       <div class="quests-list" id="quests-list"></div>
     </div>
   </div>
@@ -907,7 +906,7 @@
     <div class="dialog-card medium lucky-wheel-card">
       <div class="lucky-wheel-header">
         <div class="lucky-title-badge">🎡 每日幸運輪盤 · 皇家大抽獎</div>
-        <button id="btn-close-lucky-wheel" class="modal-close-btn">&times;</button>
+        <button id="btn-close-lucky-wheel" class="action-btn cancel small" style="min-width: 60px; padding: 4px 10px; font-size: 12px;">關閉 ✕</button>
       </div>
       <p class="lucky-subtitle">轉動幸運大轉盤，贏取海量金幣、珍貴寶石與傳奇神級寶箱！</p>
 
@@ -1589,9 +1588,9 @@
           <h2 class="dialog-title">🧗 肉鴿地下城試煉塔 (10 層深淵征途)</h2>
           <span class="dungeon-tag">ROGUELIKE GAUNTLET</span>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
           <button id="btn-reset-dungeon" class="action-btn cancel small" style="border-color: #ef4444; color: #fca5a5;" title="重置回第 1 層重新開始冒險">🔄 重置輪迴</button>
-          <button id="btn-close-dungeon" class="action-btn cancel small">返回大廳</button>
+          <button id="btn-close-dungeon" class="action-btn cancel small">關閉 ✕</button>
         </div>
       </div>
       <p class="panel-tip">挑戰 10 層地牢怪獸與神殿首領！每突破一層可自由挑選 1 項神聖聖物強化戰力，直至討伐第 10 層萬惡魔神泰坦！</p>

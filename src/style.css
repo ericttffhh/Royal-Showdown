@@ -6446,19 +6446,21 @@ body, html {
 }
 
 /* =========================================================
-   🧗 肉鴿地下城試煉塔 (Dungeon Gauntlet UI)
+   🧗 肉鴿地下城試煉塔 (Roguelike Dungeon Gauntlet)
    ========================================================= */
 .dungeon-gauntlet-card {
   max-width: 900px !important;
   max-height: 88vh;
   display: flex;
   flex-direction: column;
+  padding-bottom: 20px !important;
 }
 
 .dungeon-header-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .dungeon-tag {
@@ -6469,6 +6471,7 @@ body, html {
   padding: 3px 8px;
   border-radius: 6px;
   letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .dungeon-relics-tray {
@@ -6586,8 +6589,10 @@ body, html {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 16px;
+  padding-top: 14px;
   margin-top: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .dungeon-status-text {
