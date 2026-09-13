@@ -2611,14 +2611,14 @@ export class MenuUI {
     if (sessionsEl) sessionsEl.textContent = totalSessions.toLocaleString();
 
     // 3. 真實勝率與戰績
-    const winRate = stats.totalMatches > 0
-      ? ((stats.wins / stats.totalMatches) * 100).toFixed(1)
-      : '0.0';
+    const winRate = (stats.winRate !== undefined && stats.winRate !== null && !isNaN(stats.winRate))
+      ? stats.winRate
+      : (stats.totalMatches > 0 ? (((stats.wins || 0) / stats.totalMatches) * 100).toFixed(1) : '0.0');
     const winRateEl = document.getElementById('admin-win-rate');
     if (winRateEl) winRateEl.textContent = `🏆 全服勝率 ${winRate}% (${stats.wins || 0}勝 / ${stats.losses || 0}敗)`;
 
     // 4. 真實皇冠摧毀總量
-    const totalCrowns = stats.crownsWon || 0;
+    const totalCrowns = stats.crownsWon ?? stats.totalCrowns ?? 0;
     const crownsEl = document.getElementById('admin-total-crowns-destroyed');
     if (crownsEl) crownsEl.textContent = totalCrowns.toLocaleString();
 
@@ -2641,7 +2641,9 @@ export class MenuUI {
           const sEl = document.getElementById('admin-total-sessions');
           if (sEl) sEl.textContent = (updatedStats.totalMatches || 0).toLocaleString();
           const cEl = document.getElementById('admin-total-crowns-destroyed');
-          if (cEl) cEl.textContent = (updatedStats.crownsWon || 0).toLocaleString();
+          if (cEl) cEl.textContent = (updatedStats.crownsWon ?? updatedStats.totalCrowns ?? 0).toLocaleString();
+          const wEl = document.getElementById('admin-win-rate');
+          if (wEl) wEl.textContent = `🏆 全服勝率 ${updatedStats.winRate || '0.0'}% (${updatedStats.wins || 0}勝 / ${updatedStats.losses || 0}敗)`;
         }
       });
     }
@@ -2661,11 +2663,15 @@ export class MenuUI {
     const modeLabels = {
       lobby: '🏠 大廳整備中',
       ranked: '⚡ 1v1 天梯匹配中',
+      matchmaking: '⚡ 1v1 天梯匹配中',
       brawl: '💥 羅馬競技場大亂鬥',
       ai: '🤖 人機智慧訓練',
       boss: '🦾 泰坦首領討伐',
       pve: '🏰 無盡怪獸防守',
       rage: '🔥 7X 狂暴狂歡',
+      '7x': '🔥 7X 狂暴狂歡',
+      draft: '🃏 皇家選卡狂歡',
+      dungeon: '🧗 地下城冒險',
       coop: '🛡️ 2v2 雙人合作',
       local: '📱 同屏雙人對決'
     };
@@ -2769,12 +2775,12 @@ export class MenuUI {
     const modesGrid = document.getElementById('admin-modes-stat-grid');
     if (modesGrid) {
       const modesData = [
-        { name: '實時天梯 1v1', icon: '⚡', count: stats.modes?.ranked || 0, color: 'cyan' },
+        { name: '實時天梯 1v1', icon: '⚡', count: (stats.modes?.ranked || 0) + (stats.modes?.matchmaking || 0), color: 'cyan' },
         { name: '四人大亂鬥', icon: '💥', count: stats.modes?.brawl || 0, color: 'gold' },
         { name: '經典人機對戰', icon: '🤖', count: stats.modes?.ai || 0, color: 'blue' },
         { name: '泰坦首領討伐', icon: '🦾', count: stats.modes?.boss || 0, color: 'purple' },
         { name: '無盡怪獸防守', icon: '🏰', count: stats.modes?.pve || 0, color: 'green' },
-        { name: '7X 狂暴狂歡', icon: '🔥', count: stats.modes?.rage || 0, color: 'red' }
+        { name: '7X 狂暴狂歡', icon: '🔥', count: (stats.modes?.rage || 0) + (stats.modes?.['7x'] || 0), color: 'red' }
       ];
 
       modesGrid.innerHTML = modesData.map(m => `
@@ -2799,13 +2805,17 @@ export class MenuUI {
     }
 
     const modeLabels = {
-      ranked: '⚡ 天梯匹配',
+      ranked: '⚡ 天梯排位賽',
+      matchmaking: '⚡ 天梯排位賽',
       ai: '🤖 經典人機',
       brawl: '💥 四人大亂鬥',
       boss: '🦾 泰坦討伐',
       pve: '🏰 無盡防守',
       coop: '🛡️ 2v2 合作',
       rage: '🔥 7X 狂暴',
+      '7x': '🔥 7X 狂暴',
+      draft: '🃏 選卡狂歡',
+      dungeon: '🧗 地下城冒險',
       local: '📱 同屏對決'
     };
 

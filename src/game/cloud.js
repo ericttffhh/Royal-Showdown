@@ -899,25 +899,54 @@ export class GlobalTelemetryManager {
     const matches = this.getGlobalMatches();
     const modesCount = { ranked: 0, ai: 0, brawl: 0, boss: 0, pve: 0, coop: 0, rage: 0, dungeon: 0 };
     let totalWins = 0;
+    let totalLosses = 0;
+    let totalDraws = 0;
     let totalCrowns = 0;
 
+    const normalizeMode = (m) => {
+      if (m === 'matchmaking') return 'ranked';
+      if (m === '7x') return 'rage';
+      return m || 'ai';
+    };
+
+    // 1. 統計本地歷史場次
+    if (localStats.modes) {
+      Object.keys(localStats.modes).forEach(k => {
+        const norm = normalizeMode(k);
+        modesCount[norm] = (modesCount[norm] || 0) + (localStats.modes[k] || 0);
+      });
+    }
+
+    // 2. 統計全球遙測場次
     matches.forEach(m => {
-      if (modesCount[m.mode] !== undefined) {
-        modesCount[m.mode]++;
+      const norm = normalizeMode(m.mode);
+      if (modesCount[norm] !== undefined) {
+        modesCount[norm]++;
       } else {
-        modesCount[m.mode] = 1;
+        modesCount[norm] = 1;
       }
       if (m.result === 'win') totalWins++;
+      else if (m.result === 'loss') totalLosses++;
+      else totalDraws++;
+
       totalCrowns += (m.playerCrowns || 0) + (m.enemyCrowns || 0);
     });
 
-    const totalSessions = Math.max(matches.length, localStats.totalMatches || 0);
-    const winRate = totalSessions > 0 ? ((Math.max(totalWins, localStats.wins || 0) / totalSessions) * 100).toFixed(1) : '0.0';
+    const wins = Math.max(totalWins, localStats.wins || 0);
+    const losses = Math.max(totalLosses, localStats.losses || 0);
+    const draws = Math.max(totalDraws, localStats.draws || 0);
+    const totalSessions = Math.max(matches.length, localStats.totalMatches || (wins + losses + draws) || 0);
+    const calculatedRate = (totalSessions > 0 && wins > 0) ? ((wins / totalSessions) * 100).toFixed(1) : '0.0';
+    const crownsWon = Math.max(totalCrowns, localStats.crownsWon || 0);
 
     return {
       totalMatches: totalSessions,
-      totalCrowns: Math.max(totalCrowns, localStats.crownsWon || 0),
-      winRate: winRate,
+      wins: wins,
+      losses: losses,
+      draws: draws,
+      crownsWon: crownsWon,
+      totalCrowns: crownsWon,
+      winRate: calculatedRate,
       modes: modesCount,
       history: matches
     };
