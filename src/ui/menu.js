@@ -1229,16 +1229,19 @@ export class MenuUI {
       }
     }
 
+    const frag = document.createDocumentFragment();
+    let scrollTarget = null;
+
     ROYALE_PASS_TIERS.forEach(item => {
       const isReached = currentCrowns >= item.crownsReq;
       const freeClaimed = inventory.data.claimedPassFree.includes(item.tier);
       const goldClaimed = inventory.data.claimedPassGold.includes(item.tier);
 
       const row = document.createElement('div');
-      row.className = `pass-tier-row ${isReached ? 'unlocked' : ''}`;
+      row.className = `pass-tier-row ${isReached ? 'unlocked' : ''} ${item.tier % 100 === 0 ? 'grand-tier' : ''} ${item.tier % 10 === 0 ? 'major-tier' : ''}`;
       row.innerHTML = `
         <div class="pass-tier-num">
-          <span class="tier-badge">第 ${item.tier} 階</span>
+          <span class="tier-badge ${item.tier % 50 === 0 ? 'gold-tier-badge' : ''}">第 ${item.tier} 階</span>
           <span class="tier-crown-req">${item.crownsReq} 👑</span>
         </div>
 
@@ -1286,15 +1289,29 @@ export class MenuUI {
         this.openPassModal();
       });
 
-      list.appendChild(row);
+      if (!scrollTarget && isReached && (!freeClaimed || (inventory.data.hasGoldPass && !goldClaimed))) {
+        scrollTarget = row;
+      }
+
+      frag.appendChild(row);
     });
 
+    list.appendChild(frag);
     this.passModal.classList.remove('hidden');
+
+    if (scrollTarget) {
+      setTimeout(() => {
+        scrollTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 50);
+    }
   }
 
   grantReward(reward) {
+    if (!reward) return;
     if (reward.type === 'gold') inventory.addGold(reward.val);
     if (reward.type === 'gems') inventory.addGems(reward.val);
+    if (reward.bonusGold) inventory.addGold(reward.bonusGold);
+    if (reward.bonusGems) inventory.addGems(reward.bonusGems);
     if (reward.type === 'chest') {
       if (this.gachaManager) {
         this.gachaManager.startOpening(reward.val, true);
@@ -1313,54 +1330,37 @@ export class MenuUI {
     if (!grid) return;
     grid.innerHTML = '';
 
-    const claimed = inventory.data.claimedDailyRewards || [];
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const hasClaimedToday = inventory.data.lastDailyClaimDate === todayStr;
+    const claimedList = inventory.data.claimedDailyRewards || [];
+    const todayClaimed = inventory.data.lastDailyClaimDate === new Date().toISOString().slice(0, 10);
+    const nextClaimDay = claimedList.length + 1;
 
-    SEVEN_DAY_REWARDS.forEach((item, index) => {
-      const isClaimed = claimed.includes(item.day);
-      const isNextToClaim = !isClaimed && (index === 0 || claimed.includes(item.day - 1));
-      const canClaimNow = isNextToClaim && !hasClaimedToday;
+    SEVEN_DAY_REWARDS.forEach(item => {
+      const isClaimed = claimedList.includes(item.day);
+      const isAvailable = item.day === nextClaimDay && !todayClaimed;
 
       const card = document.createElement('div');
-      card.className = `seven-day-item day-${item.day} ${isClaimed ? 'claimed' : (canClaimNow ? 'available' : 'locked')}`;
-
-      let actionHtml = '';
-      if (isClaimed) {
-        actionHtml = '<span class="seven-status-btn claimed">✅ 已簽到</span>';
-      } else if (canClaimNow) {
-        actionHtml = `<button class="seven-claim-btn" data-day="${item.day}">✨ 立即簽到</button>`;
-      } else if (isNextToClaim && hasClaimedToday) {
-        actionHtml = '<span class="seven-status-btn locked">⏳ 明日 00:00 解鎖</span>';
-      } else {
-        actionHtml = '<span class="seven-status-btn locked">🔒 尚未解鎖</span>';
-      }
-
+      card.className = `seven-day-card-item ${isClaimed ? 'claimed' : ''} ${isAvailable ? 'available' : ''} ${item.day === 7 ? 'day-7-special' : ''}`;
       card.innerHTML = `
-        <div class="seven-day-header">第 ${item.day} 天</div>
+        <div class="seven-day-tag">第 ${item.day} 天</div>
+        <div class="seven-day-icon">${item.icon}</div>
         <div class="seven-day-title">${item.title}</div>
-        <div class="seven-day-reward-icon">${item.icon}</div>
-        <div class="seven-day-action">${actionHtml}</div>
+        <div class="seven-day-status">
+          ${isClaimed
+          ? '<span class="claimed-badge">已領取</span>'
+          : (isAvailable
+            ? `<button class="claim-day-btn" data-day="${item.day}">立即領取</button>`
+            : '<span class="lock-badge">待解鎖</span>')}
+        </div>
       `;
 
-      card.querySelector('.seven-claim-btn')?.addEventListener('click', () => {
-        const success = inventory.claimDailyLoginReward(item.day);
-        if (!success) return;
-
-        if (item.rewardType === 'gold') inventory.addGold(item.val);
-        if (item.rewardType === 'gems') inventory.addGems(item.val);
-
-        sounds.playVictory();
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        this.updateCurrencyUI();
-        this.openSevenDayModal();
-
-        if (item.rewardType === 'chest') {
-          if (this.gachaManager) {
-            this.gachaManager.startOpening(item.val, true);
-          } else {
-            inventory.openChest(item.val, true);
-          }
+      card.querySelector('.claim-day-btn')?.addEventListener('click', () => {
+        const ok = inventory.claimDailyLoginReward(item.day);
+        if (ok) {
+          this.grantReward({ type: item.rewardType, val: item.val });
+          sounds.playVictory();
+          if (item.day === 7) confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+          this.updateCurrencyUI();
+          this.openSevenDayModal();
         }
       });
 
@@ -1419,12 +1419,12 @@ export class MenuUI {
   }
 
   // -------------------------------------------------------------
-  // 🌟 1-100 級升等系統 (PLAYER 100-LEVEL PROGRESSION) UI
+  // 🌟 玩家 1-500 級等級之路 (PLAYER LEVEL ROAD) UI
   // -------------------------------------------------------------
 
   openPlayerLevelModal() {
-    const list = document.getElementById('level-rewards-list');
-    const numEl = document.getElementById('level-modal-num');
+    const list = document.getElementById('level-tiers-list');
+    const numEl = document.getElementById('level-modal-cur-num');
     const titleTagEl = document.getElementById('level-modal-title-tag');
     const expDetailEl = document.getElementById('level-modal-exp-detail');
     const barFillEl = document.getElementById('level-modal-bar-fill');
@@ -1438,21 +1438,23 @@ export class MenuUI {
 
     if (numEl) numEl.textContent = `Lv.${curLevel}`;
     if (titleTagEl) titleTagEl.textContent = title;
-    if (expDetailEl) expDetailEl.textContent = curLevel >= MAX_PLAYER_LEVEL ? 'MAX LEVEL (最高榮譽)' : `${curExp} / ${expReq}`;
+    if (expDetailEl) expDetailEl.textContent = curLevel >= MAX_PLAYER_LEVEL ? 'MAX LEVEL (500 級頂峰天帝)' : `${curExp} / ${expReq}`;
     if (barFillEl) barFillEl.style.width = curLevel >= MAX_PLAYER_LEVEL ? '100%' : `${Math.min(100, Math.round((curExp / expReq) * 100))}%`;
 
     const claimed = inventory.data.claimedLevelRewards || [];
+    const frag = document.createDocumentFragment();
+    let scrollTarget = null;
 
-    // Render 1 - 100 level milestone rewards
+    // Render 2 - 500 level milestone rewards
     for (let lvl = 2; lvl <= MAX_PLAYER_LEVEL; lvl++) {
       const isReached = curLevel >= lvl;
       const isClaimed = claimed.includes(lvl);
       const reward = getPlayerLevelReward(lvl);
       const lvlTitle = getPlayerLevelTitle(lvl);
-      const isMajor = lvl % 10 === 0;
+      const isMajor = lvl % 50 === 0 || lvl % 10 === 0;
 
       const item = document.createElement('div');
-      item.className = `level-tier-item ${isReached ? 'reached' : 'locked'} ${isMajor ? 'major-tier' : ''}`;
+      item.className = `level-tier-item ${isReached ? 'reached' : 'locked'} ${isMajor ? 'major-tier' : ''} ${lvl % 100 === 0 ? 'grand-tier' : ''}`;
       item.innerHTML = `
         <div class="level-tier-badge-box">
           <span class="level-tier-icon">${reward.icon}</span>
@@ -1481,10 +1483,23 @@ export class MenuUI {
         }
       });
 
-      list.appendChild(item);
+      if (isReached && !isClaimed && !scrollTarget) {
+        scrollTarget = item;
+      } else if (lvl === curLevel && !scrollTarget) {
+        scrollTarget = item;
+      }
+
+      frag.appendChild(item);
     }
 
+    list.appendChild(frag);
     this.playerLevelModal.classList.remove('hidden');
+
+    if (scrollTarget) {
+      setTimeout(() => {
+        scrollTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 50);
+    }
   }
 
   showLevelUpCelebration(newLevel) {

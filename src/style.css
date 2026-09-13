@@ -3945,6 +3945,28 @@ body, html {
 .reward-status-txt.locked { color: #5a6a80; }
 .reward-status-txt.require-pass { color: #cc8800; font-size: 10px; }
 
+.pass-tier-row.major-tier {
+  border-color: rgba(255, 190, 36, 0.45);
+  background: linear-gradient(90deg, rgba(255, 190, 36, 0.08) 0%, rgba(30, 96, 255, 0.08) 100%);
+}
+
+.pass-tier-row.grand-tier {
+  border: 2px solid #00ffcc !important;
+  background: linear-gradient(90deg, rgba(0, 255, 204, 0.12) 0%, rgba(196, 46, 255, 0.15) 100%) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.25);
+}
+
+.gold-tier-badge {
+  color: #00ffcc !important;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.6);
+}
+
+.level-tier-item.grand-tier {
+  border: 2px solid #00ffcc !important;
+  box-shadow: 0 0 22px rgba(0, 255, 204, 0.3) !important;
+  background: linear-gradient(90deg, rgba(14, 26, 50, 0.95) 0%, rgba(40, 15, 60, 0.95) 100%) !important;
+}
+
 /* 7-Day Rewards Modal */
 .seven-day-card { max-width: 650px; }
 .seven-day-grid {
