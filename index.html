@@ -1445,6 +1445,34 @@
     </div>
   </div>
 
+  <!-- 🔒 管理員通行密鑰門禁驗證彈窗 (ADMIN AUTH GATE MODAL) -->
+  <div id="admin-auth-modal" class="modal-backdrop hidden">
+    <div class="dialog-card admin-auth-card">
+      <div class="admin-auth-header" style="text-align: center;">
+        <span style="font-size: 38px;">🔐</span>
+        <h3 style="margin: 8px 0 4px 0; color: #38bdf8; font-size: 18px; font-weight: 800;">管理員授權門禁驗證</h3>
+        <p style="margin: 0; color: #94a3b8; font-size: 12.5px;">此區域包含全服數據、即時監控與帳號管理，請輸入管理員金鑰</p>
+      </div>
+
+      <div class="admin-auth-body" style="margin: 20px 0;">
+        <div style="position: relative;">
+          <input type="password" id="admin-passcode-input" class="admin-auth-input" placeholder="請輸入管理員通行密鑰 (預設: admin888)" />
+          <button type="button" id="btn-toggle-admin-pwd" class="admin-pwd-toggle-btn">👁️</button>
+        </div>
+        <div id="admin-auth-error-msg" class="admin-auth-error hidden">❌ 通行密鑰錯誤，請重新輸入！</div>
+        <label style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: #cbd5e1; cursor: pointer;">
+          <input type="checkbox" id="admin-remember-auth" checked style="cursor: pointer;" />
+          <span>本次瀏覽期間保持解鎖狀態 (記住授權)</span>
+        </label>
+      </div>
+
+      <div class="dialog-buttons">
+        <button id="btn-submit-admin-auth" class="action-btn confirm">🔓 驗證並解鎖後台</button>
+        <button id="btn-cancel-admin-auth" class="action-btn cancel">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 📊 遊戲後台與伺服器監控儀表板 (ADMIN & OPS DASHBOARD MODAL) -->
   <div id="admin-dashboard-modal" class="modal-backdrop hidden">
     <div class="admin-dashboard-card">
@@ -1458,6 +1486,7 @@
         </div>
         <div class="admin-header-right">
           <div class="admin-status-badge">🟢 伺服器集群運作正常 (100% HEALTHY)</div>
+          <button id="btn-lock-admin" class="admin-lock-btn" title="立即鎖定並退出管理員權限">🔒 鎖定退出</button>
           <button id="btn-close-admin-dashboard" class="modal-close-btn">&times;</button>
         </div>
       </div>
@@ -1602,18 +1631,21 @@
         </div>
 
         <div class="admin-section-title" style="margin-top: 16px;">
-          <span>⚔️ 最近對局歷史記錄 (Recent Match Sessions)</span>
+          <span>⚔️ 全服實時對局串流與歷程記錄 (Live Global Match Stream & Telemetry)</span>
+          <span class="live-tag" id="admin-matches-count-tag">0 場對局</span>
         </div>
 
         <div class="admin-history-table-wrapper">
           <table class="admin-nodes-table">
             <thead>
               <tr>
-                <th>時間</th>
+                <th>對局時間</th>
                 <th>對戰模式</th>
-                <th>對手</th>
-                <th>比分 (我方 vs 對手)</th>
+                <th>參戰領主</th>
+                <th>對手 / 敵方</th>
+                <th>比分 (皇冠)</th>
                 <th>結果</th>
+                <th>終端裝置</th>
                 <th>對局時長</th>
               </tr>
             </thead>

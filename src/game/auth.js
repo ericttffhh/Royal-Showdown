@@ -1,7 +1,7 @@
 /**
  * 皇室對決 3D - 用戶帳號與 真實 Google OAuth2 認證管理系統
  */
-import { cloudSync } from './cloud.js';
+import { cloudSync, globalTelemetry } from './cloud.js';
 
 const ACCOUNTS_STORAGE_KEY = 'royal_clash_accounts_v1';
 const CURRENT_USER_KEY = 'royal_clash_current_user_id';
@@ -62,13 +62,18 @@ export class AuthManager {
       const list = accounts || this.accounts;
       localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(list));
 
-      // 同步註冊至全域帳號名冊
+      // 同步註冊至全域帳號名冊並透過 MQTT 廣播
       const globalRaw = localStorage.getItem('royal_registered_accounts_global_v2');
       const globalList = globalRaw ? JSON.parse(globalRaw) : [];
       list.forEach(a => {
-        const idx = globalList.findIndex(g => g.id === a.id || (a.email && g.email && a.email.toLowerCase() === g.email.toLowerCase()));
-        if (idx >= 0) globalList[idx] = a;
+        const idx = globalList.findIndex(g => g.id === a.id || (a.email && g.email && a.email.toLowerCase() === g.email.toLowerCase()) || (a.username && g.username && a.username.toLowerCase() === g.username.toLowerCase()));
+        if (idx >= 0) globalList[idx] = { ...globalList[idx], ...a };
         else globalList.push(a);
+
+        // 廣播已註冊的本地帳號與 Google 帳號 (非訪客)
+        if (a.authType !== 'guest') {
+          globalTelemetry.broadcastAccountSync(a);
+        }
       });
       localStorage.setItem('royal_registered_accounts_global_v2', JSON.stringify(globalList));
     } catch (e) {
@@ -202,12 +207,36 @@ export class AuthManager {
       (a.email && a.email.toLowerCase() === trimmed.toLowerCase())
     );
 
-    // 若本機尚未記錄該帳號 (例如手機新開)，向雲端伺服器查詢
+    // 1. 若本機尚未記錄該帳號 (例如手機新開)，查詢全域跨設備註冊名冊
+    if (!user) {
+      try {
+        const globalRaw = localStorage.getItem('royal_registered_accounts_global_v2');
+        if (globalRaw) {
+          const globalList = JSON.parse(globalRaw);
+          const found = globalList.find(a => 
+            (a.username && a.username.toLowerCase() === trimmed.toLowerCase()) ||
+            (a.email && a.email.toLowerCase() === trimmed.toLowerCase())
+          );
+          if (found) {
+            if (found.password && found.password !== password) {
+              return { success: false, error: '密碼輸入不正確！' };
+            }
+            this.accounts.push(found);
+            this.saveAccounts();
+            this.setCurrentUser(found);
+            return { success: true, user: found };
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. 向雲端伺服器專屬查詢
     if (!user) {
       try {
         const queryUser = {
           username: trimmed,
-          email: trimmed.includes('@') ? trimmed : ''
+          email: trimmed.includes('@') ? trimmed : '',
+          authType: 'local'
         };
         const remoteData = await cloudSync.loadAccountFromServer(queryUser);
         if (remoteData) {
@@ -234,7 +263,7 @@ export class AuthManager {
     }
 
     if (!user) {
-      return { success: false, error: '找不到該用戶名稱！請確認名稱與電腦端完全相同' };
+      return { success: false, error: '找不到該用戶名稱！請確認名稱是否正確' };
     }
 
     if (user.password && user.password !== password) {

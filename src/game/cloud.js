@@ -760,7 +760,172 @@ export class PresenceTracker {
   }
 }
 
+/**
+ * 🎮 全球跨設備對局大數據與即時戰報監控網關 (Global Match Telemetry & Analytics Hub)
+ */
+export class GlobalTelemetryManager {
+  constructor() {
+    this.storageKey = 'royal_global_match_telemetry_v2';
+    this.listeners = new Set();
+    this.memoryMatches = [];
+
+    // 1. 本地跨分頁廣播
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        this.broadcast = new BroadcastChannel('royal_telemetry_channel');
+        this.broadcast.onmessage = (e) => {
+          if (e.data && e.data.type === 'match_record') {
+            this.recordLocalMatch(e.data.payload, false);
+          }
+        };
+      }
+    } catch (e) {}
+
+    // 2. 全球跨設備 MQTT 實時對局大數據廣播
+    this.mqtt = new SimpleMqttPresenceRelay('royal-showdown-3d/telemetry/matches-v1', (data) => {
+      if (!data || !data.id) return;
+      this.recordLocalMatch(data, false);
+    });
+
+    // 3. 全球跨設備帳號註冊同步廣播
+    this.accountMqtt = new SimpleMqttPresenceRelay('royal-showdown-3d/accounts/sync-v1', (account) => {
+      if (!account || !account.username) return;
+      try {
+        const raw = localStorage.getItem('royal_registered_accounts_global_v2');
+        const list = raw ? JSON.parse(raw) : [];
+        const idx = list.findIndex(a => a.id === account.id || a.username.toLowerCase() === account.username.toLowerCase());
+        if (idx >= 0) list[idx] = { ...list[idx], ...account };
+        else list.push(account);
+        localStorage.setItem('royal_registered_accounts_global_v2', JSON.stringify(list));
+      } catch (e) {}
+    });
+  }
+
+  onMatchUpdate(cb) {
+    if (typeof cb === 'function') this.listeners.add(cb);
+  }
+
+  offMatchUpdate(cb) {
+    this.listeners.delete(cb);
+  }
+
+  notifyListeners() {
+    const list = this.getGlobalMatches();
+    this.listeners.forEach(cb => {
+      try { cb(list); } catch (e) {}
+    });
+  }
+
+  // 廣播帳號註冊與登入資訊至全網
+  broadcastAccountSync(account) {
+    if (!account) return;
+    try {
+      this.accountMqtt?.publish(account);
+    } catch (e) {}
+  }
+
+  // 廣播並記錄一場新對局 (由手機/電腦/全體玩家結束時觸發)
+  broadcastMatch(matchData) {
+    if (!matchData) return;
+    const record = {
+      id: matchData.id || `m_${Date.now().toString(36)}_${Math.random().toString(36).substring(2,6)}`,
+      timestamp: matchData.timestamp || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      mode: matchData.mode || 'ai',
+      playerName: matchData.playerName || '皇家領主',
+      playerLevel: matchData.playerLevel || 1,
+      opponentName: matchData.opponentName || '皇家對手',
+      playerCrowns: matchData.playerCrowns ?? 0,
+      enemyCrowns: matchData.enemyCrowns ?? 0,
+      result: matchData.result || 'win',
+      duration: matchData.duration || 60,
+      device: matchData.device || (typeof navigator !== 'undefined' && navigator.userAgent.includes('Mobile') ? '📱 手機端' : '💻 桌面端')
+    };
+
+    this.recordLocalMatch(record, true);
+
+    // 跨標籤頁廣播
+    try {
+      this.broadcast?.postMessage({ type: 'match_record', payload: record });
+    } catch (e) {}
+
+    // 跨設備全球 MQTT 廣播
+    try {
+      this.mqtt?.publish(record);
+    } catch (e) {}
+  }
+
+  recordLocalMatch(record, shouldBroadcast = false) {
+    if (!record || !record.id) return;
+    const exists = this.memoryMatches.some(m => m.id === record.id);
+    if (!exists) {
+      this.memoryMatches.unshift(record);
+      if (this.memoryMatches.length > 80) this.memoryMatches.pop();
+    }
+
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      let list = raw ? JSON.parse(raw) : [];
+      if (!list.some(m => m.id === record.id)) {
+        list.unshift(record);
+        if (list.length > 80) list = list.slice(0, 80);
+        localStorage.setItem(this.storageKey, JSON.stringify(list));
+      }
+    } catch (e) {}
+
+    this.notifyListeners();
+  }
+
+  getGlobalMatches() {
+    const map = new Map();
+    this.memoryMatches.forEach(m => map.set(m.id, m));
+
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          list.forEach(m => map.set(m.id, m));
+        }
+      }
+    } catch (e) {}
+
+    const sorted = Array.from(map.values());
+    sorted.sort((a, b) => (b.id > a.id ? 1 : -1));
+    return sorted.slice(0, 60);
+  }
+
+  // 彙整全球大數據統計 (全服累計場次、勝率、摧毀皇冠總量、各模式場次)
+  getGlobalStats(localStats = {}) {
+    const matches = this.getGlobalMatches();
+    const modesCount = { ranked: 0, ai: 0, brawl: 0, boss: 0, pve: 0, coop: 0, rage: 0, dungeon: 0 };
+    let totalWins = 0;
+    let totalCrowns = 0;
+
+    matches.forEach(m => {
+      if (modesCount[m.mode] !== undefined) {
+        modesCount[m.mode]++;
+      } else {
+        modesCount[m.mode] = 1;
+      }
+      if (m.result === 'win') totalWins++;
+      totalCrowns += (m.playerCrowns || 0) + (m.enemyCrowns || 0);
+    });
+
+    const totalSessions = Math.max(matches.length, localStats.totalMatches || 0);
+    const winRate = totalSessions > 0 ? ((Math.max(totalWins, localStats.wins || 0) / totalSessions) * 100).toFixed(1) : '0.0';
+
+    return {
+      totalMatches: totalSessions,
+      totalCrowns: Math.max(totalCrowns, localStats.crownsWon || 0),
+      winRate: winRate,
+      modes: modesCount,
+      history: matches
+    };
+  }
+}
+
 export const cloudSync = new CloudSyncService();
 export const presenceTracker = new PresenceTracker();
+export const globalTelemetry = new GlobalTelemetryManager();
 
 

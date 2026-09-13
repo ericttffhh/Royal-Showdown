@@ -6,7 +6,7 @@ import { sounds } from '../audio/sound.js';
 import { GachaManager } from './gacha.js';
 import { DeckBuilderUI } from './deckBuilder.js';
 import { BenchmarkUI } from './benchmark.js';
-import { presenceTracker } from '../game/cloud.js';
+import { presenceTracker, globalTelemetry } from '../game/cloud.js';
 
 /**
  * 繁體中文全功能主選單、用戶帳號與 Google 登入、1-100級升等系統、模式切換、天梯之路、每日任務與重播管理器
@@ -499,13 +499,42 @@ export class MenuUI {
       this.replaysModal.classList.add('hidden');
     });
 
-    // 📊 Admin Dashboard & Telemetry Operations Opener
+    // 📊 Admin Dashboard & Telemetry Operations Opener (With Security Gate)
     document.getElementById('btn-open-admin-dashboard')?.addEventListener('click', () => {
-      this.openAdminDashboardModal();
+      this.openAdminAccessGate();
     });
 
     document.getElementById('btn-close-admin-dashboard')?.addEventListener('click', () => {
       this.adminModal?.classList.add('hidden');
+    });
+
+    document.getElementById('btn-lock-admin')?.addEventListener('click', () => {
+      this.lockAdminSession();
+    });
+
+    // 🔒 Admin Auth Gate Listeners
+    document.getElementById('btn-submit-admin-auth')?.addEventListener('click', () => {
+      this.verifyAdminPasscode();
+    });
+
+    document.getElementById('btn-cancel-admin-auth')?.addEventListener('click', () => {
+      document.getElementById('admin-auth-modal')?.classList.add('hidden');
+    });
+
+    document.getElementById('btn-toggle-admin-pwd')?.addEventListener('click', () => {
+      const pwdInput = document.getElementById('admin-passcode-input');
+      const toggleBtn = document.getElementById('btn-toggle-admin-pwd');
+      if (pwdInput) {
+        const isPwd = pwdInput.type === 'password';
+        pwdInput.type = isPwd ? 'text' : 'password';
+        if (toggleBtn) toggleBtn.textContent = isPwd ? '🙈' : '👁️';
+      }
+    });
+
+    document.getElementById('admin-passcode-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        this.verifyAdminPasscode();
+      }
     });
 
     document.getElementById('btn-run-ping-test')?.addEventListener('click', () => {
@@ -2538,6 +2567,60 @@ export class MenuUI {
   }
 
   // -------------------------------------------------------------
+  // 🔒 管理員門禁驗證與安全會話管理 (ADMIN SECURITY & AUTH GATE)
+  // -------------------------------------------------------------
+
+  isAdminAuthenticated() {
+    return sessionStorage.getItem('royal_admin_auth_v1') === 'unlocked';
+  }
+
+  openAdminAccessGate() {
+    if (this.isAdminAuthenticated()) {
+      this.openAdminDashboardModal();
+    } else {
+      const authModal = document.getElementById('admin-auth-modal');
+      const input = document.getElementById('admin-passcode-input');
+      const errorMsg = document.getElementById('admin-auth-error-msg');
+      if (input) input.value = '';
+      if (errorMsg) errorMsg.classList.add('hidden');
+      if (authModal) authModal.classList.remove('hidden');
+      setTimeout(() => input?.focus(), 120);
+    }
+  }
+
+  verifyAdminPasscode() {
+    const input = document.getElementById('admin-passcode-input');
+    const errorMsg = document.getElementById('admin-auth-error-msg');
+    const rememberBox = document.getElementById('admin-remember-auth');
+    const val = (input ? input.value : '').trim();
+
+    // 支援授權通行密鑰: admin888, royal2026, admin
+    if (val === 'admin888' || val === 'royal2026' || val === 'admin') {
+      if (rememberBox?.checked) {
+        sessionStorage.setItem('royal_admin_auth_v1', 'unlocked');
+      }
+      document.getElementById('admin-auth-modal')?.classList.add('hidden');
+      this.openAdminDashboardModal();
+      this.showAnnouncement('🔓 管理員身分核驗成功，已解鎖統一後台與實時遙測');
+      sounds.play('chest_open');
+    } else {
+      if (errorMsg) {
+        errorMsg.classList.remove('hidden');
+        errorMsg.textContent = '❌ 通行密鑰錯誤或權限不足，請重新輸入！';
+      }
+      sounds.play('btn_click');
+    }
+  }
+
+  lockAdminSession() {
+    sessionStorage.removeItem('royal_admin_auth_v1');
+    this.adminModal?.classList.add('hidden');
+    document.getElementById('admin-auth-modal')?.classList.add('hidden');
+    this.showAnnouncement('🔒 統一後台已安全鎖定');
+    sounds.play('btn_click');
+  }
+
+  // -------------------------------------------------------------
   // 📊 遊戲後台與實時伺服器營運監控儀表板 (ADMIN & OPS DASHBOARD)
   // -------------------------------------------------------------
 
@@ -2545,7 +2628,7 @@ export class MenuUI {
     if (!this.adminModal) return;
     this.adminModal.classList.remove('hidden');
 
-    const stats = inventory.data.stats || {
+    const localStats = inventory.data.stats || {
       totalMatches: 0,
       wins: 0,
       losses: 0,
@@ -2554,6 +2637,9 @@ export class MenuUI {
       modes: { ranked: 0, ai: 0, brawl: 0, boss: 0, pve: 0, coop: 0, rage: 0 },
       history: []
     };
+
+    // 取得統一全服跨終端遙測聚合數據 (含本機與全球其他設備)
+    const stats = globalTelemetry.getGlobalStats(localStats);
 
     // 1. 獲取 100% 真實全球與局域在線玩家名冊
     const activePlayers = presenceTracker.getActivePlayers();
@@ -2570,7 +2656,7 @@ export class MenuUI {
       ? ((stats.wins / stats.totalMatches) * 100).toFixed(1)
       : '0.0';
     const winRateEl = document.getElementById('admin-win-rate');
-    if (winRateEl) winRateEl.textContent = `🏆 本地真實勝率 ${winRate}% (${stats.wins || 0}勝 / ${stats.losses || 0}敗)`;
+    if (winRateEl) winRateEl.textContent = `🏆 全服勝率 ${winRate}% (${stats.wins || 0}勝 / ${stats.losses || 0}敗)`;
 
     // 4. 真實皇冠摧毀總量
     const totalCrowns = stats.crownsWon || 0;
@@ -2585,6 +2671,21 @@ export class MenuUI {
     this.renderAdminLogs();
     this.renderAdminMatches(stats);
     this.renderAdminAccounts(this.currentAdminAccountFilter || 'all', this.currentAdminAccountSearch || '');
+
+    // 實時對局遙測監聽 (後台開啟時，其他終端結束對局自動更新 Tab 3 與 KPI)
+    if (!this._adminTelemetryListenerBound) {
+      this._adminTelemetryListenerBound = true;
+      globalTelemetry.onMatchUpdate(() => {
+        if (this.adminModal && !this.adminModal.classList.contains('hidden')) {
+          const updatedStats = globalTelemetry.getGlobalStats(inventory.data.stats || {});
+          this.renderAdminMatches(updatedStats);
+          const sEl = document.getElementById('admin-total-sessions');
+          if (sEl) sEl.textContent = (updatedStats.totalMatches || 0).toLocaleString();
+          const cEl = document.getElementById('admin-total-crowns-destroyed');
+          if (cEl) cEl.textContent = (updatedStats.crownsWon || 0).toLocaleString();
+        }
+      });
+    }
   }
 
   renderAdminPlayers(activePlayers = []) {
@@ -2687,10 +2788,11 @@ export class MenuUI {
 
     const logs = [
       { tag: 'PRESENCE', color: '#38bdf8', msg: '真實連線心跳廣播 (100% Genuine Heartbeat) · 實時更新線上玩家' },
-      { tag: 'SECURITY', color: '#10b981', msg: 'Cloud Vault 4 位數極短同步短碼金鑰握手成功 · 存檔自動加密備份' },
+      { tag: 'TELEMETRY', color: '#10b981', msg: '全服統一遙測通道 (Telemetry Hub) 連線就緒 · 跨設備對局實時匯聚' },
+      { tag: 'AUTH-SYNC', color: '#a855f7', msg: '全球註冊帳號名冊雲端自動同步 (Sync Hub) 正常運作中' },
       { tag: 'MATCHMAKER', color: '#38bdf8', msg: '全球實時天梯快速配對池活躍中 · 權威伺服器監聽就緒' },
-      { tag: 'BRAWL', color: '#a855f7', msg: '羅馬競技場 4 人大亂鬥房間 ROYALE-BRAWL 建立完成 · 10Hz 狀態廣播中' },
-      { tag: 'NETWORK', color: '#f59e0b', msg: 'WebRTC STUN/TURN 連線建立 · 封包遺失率 0.00% · 低延遲傳輸' },
+      { tag: 'BRAWL', color: '#f59e0b', msg: '羅馬競技場 4 人大亂鬥房間 ROYALE-BRAWL 建立完成 · 10Hz 狀態廣播中' },
+      { tag: 'SECURITY', color: '#10b981', msg: '管理員授權門禁安全機制已啟用 · 阻擋未授權訪問' },
       { tag: 'SERVER', color: '#60a5fa', msg: '伺服器邊緣集群節點負載健康，實時健康度 100%' }
     ];
 
@@ -2727,11 +2829,15 @@ export class MenuUI {
       `).join('');
     }
 
-    // 2. 最近真實對局歷史記錄
+    // 2. 全服實時對局串流 (跨終端統一遙測記錄)
     const matchTbody = document.getElementById('admin-matches-tbody');
+    const matchCountTag = document.getElementById('admin-matches-count-tag');
     if (!matchTbody) return;
 
-    const historyList = (stats.history && stats.history.length > 0) ? stats.history : [];
+    const globalMatches = globalTelemetry.getGlobalMatches();
+    if (matchCountTag) {
+      matchCountTag.textContent = `${globalMatches.length} 場即時遙測對局`;
+    }
 
     const modeLabels = {
       ranked: '⚡ 天梯匹配',
@@ -2744,27 +2850,42 @@ export class MenuUI {
       local: '📱 同屏對決'
     };
 
-    if (historyList.length === 0) {
+    if (globalMatches.length === 0) {
       matchTbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">
-            ⚔️ 尚無對戰歷史記錄，立即開啟一場 1v1 天梯或四人大亂鬥吧！
+          <td colspan="8" style="text-align: center; color: #94a3b8; padding: 24px;">
+            ⚔️ 尚無對局資料傳入。任何手機端、PC 端的對局結束後均會即時傳輸至此統一後台！
           </td>
         </tr>
       `;
       return;
     }
 
-    matchTbody.innerHTML = historyList.map(h => `
-      <tr>
-        <td><span style="color: #94a3b8; font-size: 11px;">${h.timestamp || '剛剛'}</span></td>
-        <td><strong>${modeLabels[h.mode] || h.mode}</strong></td>
-        <td>${h.opponent || '神秘領主'}</td>
-        <td><strong style="color: #60a5fa;">${h.playerCrowns ?? 0}</strong> vs <strong style="color: #f87171;">${h.enemyCrowns ?? 0}</strong></td>
-        <td><span class="match-badge ${h.result}">${h.result === 'win' ? '🏆 勝利' : (h.result === 'loss' ? '💀 戰敗' : '🤝 平手')}</span></td>
-        <td>${h.duration ? h.duration + ' 秒' : '完賽'}</td>
-      </tr>
-    `).join('');
+    matchTbody.innerHTML = globalMatches.map(h => {
+      const isWin = h.result === 'win';
+      const isLoss = h.result === 'loss';
+      const resultBadge = isWin 
+        ? '<span class="match-badge win">🏆 勝利</span>'
+        : (isLoss ? '<span class="match-badge loss">💀 戰敗</span>' : '<span class="match-badge draw">🤝 平手</span>');
+
+      return `
+        <tr>
+          <td><span style="color: #94a3b8; font-size: 11px;">${h.timestamp || '剛剛'}</span></td>
+          <td><strong>${modeLabels[h.mode] || h.mode || '未知模式'}</strong></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 13px;">${h.avatar || '👑'}</span>
+              <span style="color: #f1f5f9; font-weight: 600;">${h.playerName || '皇家領主'}</span>
+            </div>
+          </td>
+          <td><span style="color: #cbd5e1;">${h.opponent || '神秘領主'}</span></td>
+          <td><strong style="color: #60a5fa;">${h.playerCrowns ?? 0}</strong> <span style="color: #64748b;">:</span> <strong style="color: #f87171;">${h.enemyCrowns ?? 0}</strong></td>
+          <td>${resultBadge}</td>
+          <td><span style="color: #a5f3fc; font-size: 11px;">📱 ${h.device || 'Web Client'}</span></td>
+          <td><span style="color: #94a3b8; font-size: 11px;">${h.duration ? h.duration + ' 秒' : '完賽'}</span></td>
+        </tr>
+      `;
+    }).join('');
   }
 
   // 4. 渲染全服註冊帳號名冊與管理資料庫

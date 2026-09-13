@@ -1,6 +1,6 @@
 import { CARDS, CHESTS, UPGRADE_COSTS, DEFAULT_DECK, DEFAULT_QUESTS, generateRandomDailyQuests, MAX_PLAYER_LEVEL, getPlayerExpRequired, getPlayerLevelReward } from './cards.js';
 import { auth } from './auth.js';
-import { cloudSync } from './cloud.js';
+import { cloudSync, globalTelemetry } from './cloud.js';
 
 /**
  * 玩家資源、背包、任務、1-100級升等、天梯與對戰重播記錄系統 (支援多帳號獨立儲存與雲端伺服器即時同步)
@@ -428,7 +428,7 @@ export class InventoryManager {
 
     const matchRecord = {
       id: `match_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-      timestamp: new Date().toLocaleString(),
+      timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       mode: modeKey,
       result: result, // 'win' | 'loss' | 'draw'
       playerCrowns: playerCrowns,
@@ -444,6 +444,23 @@ export class InventoryManager {
     }
 
     this.saveData();
+
+    // 🌐 廣播至統一全球營運後台大數據
+    try {
+      globalTelemetry.broadcastMatch({
+        id: matchRecord.id,
+        timestamp: matchRecord.timestamp,
+        mode: modeKey,
+        playerName: auth.currentUser?.username || '皇家領主',
+        playerLevel: this.data.playerLevel || 1,
+        opponentName: opponentName || '皇家對手',
+        playerCrowns: playerCrowns,
+        enemyCrowns: enemyCrowns,
+        result: result,
+        duration: Math.round(duration),
+        device: typeof navigator !== 'undefined' && navigator.userAgent.includes('Mobile') ? '📱 手機端' : '💻 桌面端'
+      });
+    } catch (e) {}
   }
 
   canUpgrade(cardId) {
