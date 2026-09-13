@@ -11,10 +11,10 @@ export class InventoryManager {
     this.data = this.loadData();
     this.syncCallbacks = [];
 
-    // 綁定雲端即時心跳提供者與遠端推播監聽
+    // 綁定雲端即時心跳提供者與遠端推播監聽 (僅對已登入/具名帳號生效，訪客 100% 獨立)
     cloudSync.setAccountProvider(() => auth.currentUser);
     cloudSync.onRemoteUpdate((remoteSave) => {
-      if (remoteSave && (remoteSave.playerLevel || remoteSave.gold !== undefined)) {
+      if (auth.currentUser && auth.currentUser.authType !== 'guest' && remoteSave && (remoteSave.playerLevel || remoteSave.gold !== undefined)) {
         const merged = this.resolveConflictWithHighestLevel(this.data, remoteSave);
         this.data = merged;
         this.saveData(true);
@@ -22,10 +22,12 @@ export class InventoryManager {
       }
     });
 
-    // 啟動時自動與伺服器進行非同步雲端校準
-    setTimeout(() => {
-      this.syncWithServer();
-    }, 200);
+    // 啟動時若為已登入帳號，自動與伺服器進行專屬雲端校準
+    if (auth.currentUser && auth.currentUser.authType !== 'guest') {
+      setTimeout(() => {
+        this.syncWithServer();
+      }, 200);
+    }
   }
 
   onSync(cb) {
@@ -261,9 +263,9 @@ export class InventoryManager {
     }
   }
 
-  // 自動與雲端伺服器連線同步最高等級存檔
+  // 自動與雲端伺服器連線同步最高等級存檔 (僅對已登入/具名帳號生效)
   async syncWithServer(onComplete = null) {
-    if (!auth.currentUser) return this.data;
+    if (!auth.currentUser || auth.currentUser.authType === 'guest') return this.data;
     try {
       const serverSave = await cloudSync.loadAccountFromServer(auth.currentUser);
       if (serverSave && (serverSave.playerLevel || serverSave.gold !== undefined)) {
@@ -282,28 +284,18 @@ export class InventoryManager {
     return this.data;
   }
 
+  // 切換帳號：完全載入該帳號專屬存檔，絕不與前一個帳號混淆或合併
   switchUser(previousUserId = null) {
     const currentUserId = auth.currentUser ? auth.currentUser.id : 'guest';
-
-    if (previousUserId && previousUserId !== currentUserId) {
-      // 檢查前一個帳號與當前帳號的進度
-      const prevData = this.loadData(previousUserId);
-      const currData = this.loadData(currentUserId);
-
-      // 當資料衝突時，以等級高者優先同步合併
-      const synced = this.resolveConflictWithHighestLevel(prevData, currData);
-      this.data = synced;
-      this.saveData();
-    } else {
-      this.data = this.loadData();
-    }
+    this.data = this.loadData(currentUserId);
 
     if (auth.currentUser) {
       auth.currentUser.level = this.data.playerLevel || 1;
       auth.currentUser.exp = this.data.playerExp || 0;
       auth.saveAccounts();
-      // 切換用戶時立即向伺服器拉取該帳號最新進度
-      this.syncWithServer();
+      if (auth.currentUser.authType !== 'guest') {
+        this.syncWithServer();
+      }
     }
 
     return this.data;

@@ -50,36 +50,33 @@ class CloudSyncService {
     return `${prefix}_${hex}`;
   }
 
-  // 根據使用者帳號物件提取所有關聯的雲端識別碼
+  // 根據使用者帳號物件提取所有關聯的唯一雲端識別碼 (訪客帳號完全獨立，不生成共享 Slug)
   getAccountSlugs(user) {
-    if (!user) return ['royal_u_guest'];
+    if (!user || user.authType === 'guest') return [];
     const slugs = [];
 
-    // 1. 根據使用者名稱綁定
-    if (user.username && user.username.trim()) {
-      const uSlug = this.toSafeSlug('royal_u', user.username);
-      if (uSlug) slugs.push(uSlug);
-    }
-
-    // 2. 根據 Gmail / 電子郵件綁定
-    if (user.email && user.email.includes('@')) {
-      const eSlug = this.toSafeSlug('royal_e', user.email);
-      if (eSlug) slugs.push(eSlug);
-    }
-
-    // 3. 根據 Google Sub ID 綁定
+    // 1. 根據 Google Sub ID 綁定 (全球唯一)
     if (user.googleId) {
       const gSlug = this.toSafeSlug('royal_g', String(user.googleId));
       if (gSlug) slugs.push(gSlug);
     }
 
-    // 4. 本地使用者 ID 保底
-    if (slugs.length === 0 && user.id) {
-      const idSlug = this.toSafeSlug('royal_id', user.id);
-      if (idSlug) slugs.push(idSlug);
+    // 2. 根據 Gmail / 電子郵件綁定 (全球唯一)
+    if (user.email && user.email.includes('@')) {
+      const eSlug = this.toSafeSlug('royal_e', user.email.trim().toLowerCase());
+      if (eSlug) slugs.push(eSlug);
     }
 
-    return slugs.length > 0 ? slugs : ['royal_u_guest'];
+    // 3. 根據本地具名已註冊帳號綁定 (非預設訪客名)
+    if (user.authType === 'local' && user.username && user.username.trim()) {
+      const u = user.username.trim();
+      if (u !== '皇家領主' && !u.startsWith('皇家領主 #') && u !== '訪客領主') {
+        const uSlug = this.toSafeSlug('royal_u', u);
+        if (uSlug) slugs.push(uSlug);
+      }
+    }
+
+    return slugs;
   }
 
   // 設定視窗與背景監聽器
@@ -89,7 +86,7 @@ class CloudSyncService {
     const triggerQuickSync = () => {
       if (this.currentUserGetter) {
         const user = this.currentUserGetter();
-        if (user) {
+        if (user && user.authType !== 'guest') {
           this.checkAndPullRemote(user);
         }
       }
@@ -103,13 +100,13 @@ class CloudSyncService {
     });
     window.addEventListener('online', triggerQuickSync);
 
-    // 啟動 4 秒背景心跳自動校準
+    // 啟動背景心跳自動校準 (僅對已登入/具名帳號)
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {
       if (document.visibilityState === 'visible' && !this.isSyncing) {
         triggerQuickSync();
       }
-    }, 4000);
+    }, 8000);
   }
 
   setAccountProvider(provider) {
@@ -117,10 +114,10 @@ class CloudSyncService {
   }
 
   /**
-   * 檢查並自動拉取遠端最新存檔資料包
+   * 檢查並自動拉取遠端最新存檔資料包 (僅對已登入帳號生效，訪客完全本地隔離)
    */
   async checkAndPullRemote(user) {
-    if (!user || this.isSyncing) return null;
+    if (!user || user.authType === 'guest' || this.isSyncing) return null;
     try {
       const remoteData = await this.loadAccountFromServer(user);
       if (remoteData) {
@@ -139,13 +136,14 @@ class CloudSyncService {
   }
 
   /**
-   * 由雲端伺服器載入該帳號 (以用戶名 / Gmail / 全局存檔槽 查詢)
+   * 由雲端伺服器載入該帳號 (以專屬 Google ID / Gmail / 註冊用戶名 查詢)
    */
   async loadAccountFromServer(user) {
-    if (!user) return null;
+    if (!user || user.authType === 'guest') return null;
     const slugs = this.getAccountSlugs(user);
+    if (slugs.length === 0) return null;
 
-    // 1. 優先透過內部零 CORS /api/cloud 伺服器 API 查詢
+    // 1. 透過內部 /api/cloud 伺服器 API 查詢專屬 Slug
     for (const slug of slugs) {
       try {
         const res = await fetch(`/api/cloud?key=${slug}`, { cache: 'no-store' });
@@ -159,18 +157,7 @@ class CloudSyncService {
       } catch (e) {}
     }
 
-    // 2. 若為訪客帳號或新裝置未登入，嘗試拉取最近全局主存檔
-    try {
-      const res = await fetch('/api/cloud?key=royal_latest_global_save', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && (data.playerLevel >= 2 || data.save?.playerLevel >= 2)) {
-          return data.save || data;
-        }
-      }
-    } catch (e) {}
-
-    // 3. 本地快取保底
+    // 2. 本地快取保底
     try {
       const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
       for (const slug of slugs) {
@@ -187,22 +174,24 @@ class CloudSyncService {
    * 防抖排程即時同步
    */
   scheduleSaveToServer(user, saveData) {
-    if (!user) return;
+    if (!user || user.authType === 'guest') return;
     if (this.syncDebounceTimer) {
       clearTimeout(this.syncDebounceTimer);
     }
 
     this.syncDebounceTimer = setTimeout(() => {
       this.saveAccountToServer(user, saveData);
-    }, 350);
+    }, 500);
   }
 
   /**
-   * 將帳號的完整存檔資料包全自動上傳並綁定至帳號名稱與 Gmail
+   * 將帳號的完整存檔資料包全自動上傳並綁定至帳號專屬 Slug
    */
   async saveAccountToServer(user, saveData) {
-    if (!user || !saveData) return false;
+    if (!user || user.authType === 'guest' || !saveData) return false;
     const slugs = this.getAccountSlugs(user);
+    if (slugs.length === 0) return false;
+
     const now = Date.now();
     this.lastSavedTimestamp = now;
 
@@ -220,7 +209,7 @@ class CloudSyncService {
     };
     const bodyStr = JSON.stringify(payload);
 
-    // 更新本地快取
+    // 更新本地專屬快取
     try {
       const cacheMap = JSON.parse(localStorage.getItem(this.localCacheRegistryKey) || '{}');
       slugs.forEach(s => cacheMap[s] = payload);
@@ -230,9 +219,8 @@ class CloudSyncService {
     this.isSyncing = true;
     let anySuccess = false;
 
-    // 1. 內部零 CORS /api/cloud 儲存
-    const targetKeys = [...slugs, 'royal_latest_global_save'];
-    for (const key of targetKeys) {
+    // 儲存至該帳號專屬 Slug (不覆蓋其他用戶)
+    for (const key of slugs) {
       try {
         const res = await fetch(`/api/cloud?key=${key}`, {
           method: 'POST',
