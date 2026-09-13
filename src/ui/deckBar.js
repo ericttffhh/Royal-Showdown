@@ -68,6 +68,52 @@ export class DeckBarUI {
     };
   }
 
+  updateSelectionUI() {
+    const cardElements = this.cardsHandEl?.querySelectorAll('.card-item');
+    cardElements?.forEach((el) => {
+      const id = el.dataset.cardId;
+      if (id === this.selectedCardId) {
+        el.classList.add('selected');
+      } else {
+        el.classList.remove('selected');
+      }
+    });
+  }
+
+  selectCard(cardId, index, clientX = 0, clientY = 0) {
+    const card = CARDS[cardId];
+    if (!card) return;
+
+    const isAffordableNow = this.currentElixir >= card.cost;
+    if (!isAffordableNow) {
+      // 聖水不足：Q 彈搖晃與警示音
+      sounds.playTone(200, 60, 0.12, 'sawtooth');
+      const cardEl = this.cardsHandEl?.querySelector(`[data-card-id="${cardId}"]`);
+      if (cardEl) {
+        cardEl.classList.add('wobble-shake');
+        setTimeout(() => cardEl.classList.remove('wobble-shake'), 400);
+      }
+      return;
+    }
+
+    this.selectedCardId = cardId;
+    this.selectedCardIndex = index;
+    this.dragStartPos = { x: clientX, y: clientY };
+    this.draggedCardId = cardId;
+    this.isDragging = false;
+    this.lastCardSelectTime = Date.now();
+
+    sounds.playTone(680, 45, 0.1, 'sine');
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(12);
+      }
+    } catch (e) {}
+
+    this.updateSelectionUI();
+    this.updatePlacementPreview(clientX, clientY);
+  }
+
   renderHand() {
     if (!this.cardsHandEl) return;
     this.cardsHandEl.innerHTML = '';
@@ -105,50 +151,18 @@ export class DeckBarUI {
         <div class="card-name">${isEvoReady ? evoInfo.evo.name : card.name}</div>
       `;
 
-      // 觸控與點擊手牌處理
-      const onCardStart = (clientX, clientY) => {
-        const now = Date.now();
-        if (this.selectedCardId === cardId && now - this.lastCardSelectTime > 350) {
-          // 再次點擊已選中的卡牌：取消選中
-          this.selectedCardId = null;
-          this.selectedCardIndex = null;
-          this.arena.setDeploymentVisual(false);
-          this.renderHand();
-          return;
-        }
-
-        const isAffordableNow = this.currentElixir >= card.cost;
-        if (!isAffordableNow) {
-          // 聖水不足：Q 彈搖晃與警示音
-          sounds.playTone(200, 60, 0.12, 'sawtooth');
-          cardDiv.classList.add('wobble-shake');
-          setTimeout(() => cardDiv.classList.remove('wobble-shake'), 400);
-          return;
-        }
-
-        // 選中該卡牌
-        this.selectedCardId = cardId;
-        this.selectedCardIndex = index;
-        this.dragStartPos = { x: clientX, y: clientY };
-        this.draggedCardId = cardId;
-        this.isDragging = false;
-        this.lastCardSelectTime = now;
-
-        sounds.playTone(680, 45, 0.1, 'sine');
-        try {
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(12);
-          }
-        } catch (e) {}
-
-        this.renderHand();
-        this.updatePlacementPreview(clientX, clientY);
-      };
-
+      // 觸控與點擊手牌處理 (使用 pointerdown 支援滑鼠、觸控筆與手指)
       cardDiv.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
-        onCardStart(e.clientX, e.clientY);
+        this.selectCard(cardId, index, e.clientX, e.clientY);
       });
+
+      cardDiv.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        if (e.touches && e.touches.length > 0) {
+          this.selectCard(cardId, index, e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
 
       this.cardsHandEl.appendChild(cardDiv);
     });
@@ -213,8 +227,17 @@ export class DeckBarUI {
   }
 
   tryDeployAtCoordinates(clientX, clientY) {
-    const activeCardId = this.selectedCardId || this.draggedCardId;
-    if (!activeCardId) return false;
+    let activeCardId = this.selectedCardId || this.draggedCardId;
+
+    // 若未手動點選手牌，自動選取手牌中第一張聖水足夠的卡牌進行出兵
+    if (!activeCardId) {
+      const affordableId = this.hand.find(id => CARDS[id] && this.currentElixir >= CARDS[id].cost);
+      if (affordableId) {
+        activeCardId = affordableId;
+      } else {
+        return false;
+      }
+    }
 
     // 檢查點擊是否落在手牌 HUD 或頂部導航上
     const dockEl = document.querySelector('.battle-dock');
@@ -261,8 +284,6 @@ export class DeckBarUI {
   }
 
   setupArenaInteractions() {
-    const container = this.arena.container || document.getElementById('canvas-container');
-
     // 1. 移動追蹤 (Pointer & Touch)
     const onMove = (clientX, clientY) => {
       if (this.draggedCardId && this.dragStartPos) {
@@ -286,9 +307,8 @@ export class DeckBarUI {
     // 2. 點擊 / 按下部署 (Tap-to-Deploy 即點即放)
     let lastDeployTapTime = 0;
     const onArenaPress = (clientX, clientY, target) => {
-      if (!this.selectedCardId) return;
       const now = Date.now();
-      if (now - lastDeployTapTime < 60) return; // Debounce rapid multi-touch
+      if (now - lastDeployTapTime < 50) return; // Debounce rapid multi-touch
 
       if (target && (target.closest('.battle-dock') || target.closest('.battle-side-actions') || target.closest('.battle-top-bar') || target.closest('.modal-backdrop:not(.hidden)'))) {
         return;
