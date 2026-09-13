@@ -2560,7 +2560,7 @@ export class MenuUI {
     if (auth.isAdminUser()) {
       // ✅ 登入的是管理員遊戲帳號 -> 直接進入後台！
       this.openAdminDashboardModal();
-      this.showAnnouncement(`👑 歡迎管理員 ${ADMIN_EMAIL} 進入統一後台`);
+      this.showAnnouncement('👑 歡迎管理員進入統一營運後台');
       sounds.play('chest_open');
     } else {
       // ❌ 別的帳號點擊 -> 直接跳出「權限不足」彈窗！
@@ -2569,11 +2569,9 @@ export class MenuUI {
       if (accountEl) {
         const u = auth.currentUser;
         if (!u || u.authType === 'guest') {
-          accountEl.textContent = '訪客領主 (未登入管理員)';
+          accountEl.textContent = '訪客領主 (未登入)';
         } else {
-          const name = u.username || '領主';
-          const mail = u.email ? ` (${u.email})` : '';
-          accountEl.textContent = `${name}${mail}`;
+          accountEl.textContent = u.username || '普通領主帳號';
         }
       }
       if (deniedModal) deniedModal.classList.remove('hidden');
