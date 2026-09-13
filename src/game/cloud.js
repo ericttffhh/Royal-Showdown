@@ -428,15 +428,24 @@ export class PresenceTracker {
   }
 
   getSelfPayload() {
-    let username = '訪客領主';
+    let username = '皇家領主';
     let level = 1;
     let trophies = 1000;
     try {
-      const user = JSON.parse(localStorage.getItem('royal_current_user') || '{}');
-      if (user && user.username) username = user.username;
-      const save = JSON.parse(localStorage.getItem(`royal_clash_save_user_${user?.id || 'guest'}`) || '{}');
-      if (save.playerLevel) level = save.playerLevel;
-      if (save.trophies) trophies = save.trophies;
+      const currentUserId = localStorage.getItem('royal_clash_current_user_id');
+      const accountsRaw = localStorage.getItem('royal_clash_accounts_v1');
+      if (accountsRaw) {
+        const accounts = JSON.parse(accountsRaw);
+        const cur = (accounts && Array.isArray(accounts)) ? (accounts.find(a => a.id === currentUserId) || accounts[0]) : null;
+        if (cur && cur.username) username = cur.username;
+        if (cur && cur.level) level = cur.level;
+      }
+      const saveRaw = localStorage.getItem(`royal_clash_save_user_${currentUserId || 'guest'}`);
+      if (saveRaw) {
+        const save = JSON.parse(saveRaw);
+        if (save.playerLevel) level = save.playerLevel;
+        if (save.trophies) trophies = save.trophies;
+      }
     } catch (e) {}
 
     return {
@@ -446,7 +455,7 @@ export class PresenceTracker {
       trophies,
       mode: this.currentMode || 'lobby',
       timestamp: Date.now(),
-      userAgent: typeof navigator !== 'undefined' ? (navigator.userAgent.includes('Mobile') ? '手機端' : '桌面端') : '網頁'
+      userAgent: typeof navigator !== 'undefined' ? (navigator.userAgent.includes('Mobile') ? '📱 手機端' : '💻 桌面端') : '🌐 網頁'
     };
   }
 
